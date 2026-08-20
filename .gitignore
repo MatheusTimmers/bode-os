@@ -1,0 +1,8 @@
+# build do cargo
+/target
+
+# artefatos de build / depuracao
+*.map
+*.log
+*.dtb
+*.dts

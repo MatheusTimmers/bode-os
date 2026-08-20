@@ -1,0 +1,6 @@
+[build]
+target = "riscv32imac-unknown-none-elf"
+
+[target.riscv32imac-unknown-none-elf]
+runner = "./run.sh"
+rustflags = ["-C", "link-arg=-Tkernel.ld"]
