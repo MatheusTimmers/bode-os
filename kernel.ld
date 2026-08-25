@@ -5,6 +5,7 @@ SECTIONS {
 
     .text :{
         KEEP(*(.text.boot));
+        KEEP(*(.text.trap));
         *(.text .text.*);
     }
 
