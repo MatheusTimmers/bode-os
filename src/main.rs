@@ -6,6 +6,7 @@ mod mem;
 mod trap;
 mod uart;
 mod cpu;
+mod clint;
 
 use core::panic::PanicInfo;
 
