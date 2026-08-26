@@ -9,12 +9,10 @@ mod cpu;
 
 use core::panic::PanicInfo;
 
-use crate::cpu::halt;
-
 #[panic_handler]
 fn panic(panic: &PanicInfo<'_>) -> ! {
     println!("{}", panic);
-    halt();
+    cpu::halt();
 }
 
 #[unsafe(no_mangle)]
@@ -31,5 +29,5 @@ pub extern "C" fn kmain() -> ! {
     println!(".");
     println!("Carregado");
 
-    halt();
+    cpu::halt();
 }
