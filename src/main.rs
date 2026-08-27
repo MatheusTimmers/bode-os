@@ -2,11 +2,11 @@
 #![no_std]
 
 mod boot;
+mod clint;
+mod cpu;
 mod mem;
 mod trap;
 mod uart;
-mod cpu;
-mod clint;
 
 use core::panic::PanicInfo;
 
@@ -23,12 +23,15 @@ pub extern "C" fn kmain() -> ! {
         trap::configure_mtvec()
     };
 
-    println!("Iniciando o Kernel no BODE...");
-    print!("Carregando");
-    print!(".");
-    print!(".");
-    println!(".");
-    println!("Carregado");
+    println!("Iniciando o Kernel BODE...");
 
-    cpu::halt();
+    clint::schedule_next_tick(clint::TICK);
+    unsafe {
+        cpu::set_mie(cpu::MIE_MTIE);
+        cpu::set_mstatus(cpu::MSTATUS_MIE);
+    }
+
+    loop {
+        cpu::wfi();
+    }
 }
