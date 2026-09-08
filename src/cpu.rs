@@ -98,3 +98,20 @@ pub unsafe fn write_mepc(addr: usize) {
 pub unsafe fn write_mtvec(addr: usize) {
     unsafe { asm!("csrw mtvec, {}", in(reg) addr, options(nomem, nostack)) };
 }
+
+/// Escreve `mscratch` o endereço de memória do contexto da tarefa vigente.
+///
+/// # Safety
+/// O parâmetro `addr` deve ser um ponteiro alinhado e válido para uma estrutura de
+/// contexto.
+#[inline]
+pub unsafe fn write_mscratch(addr: usize) {
+    unsafe { asm!("csrw mscratch, {}", in(reg) addr, options(nomem, nostack)) };
+}
+
+#[inline]
+pub fn read_mscratch() -> usize {
+    let value: usize;
+    unsafe { asm!("csrr {}, mscratch", out(reg) value, options(nomem, nostack)) };
+    value
+}

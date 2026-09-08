@@ -7,6 +7,7 @@ mod cpu;
 mod mem;
 mod trap;
 mod uart;
+mod task;
 
 use core::panic::PanicInfo;
 
@@ -20,7 +21,9 @@ fn panic(panic: &PanicInfo<'_>) -> ! {
 pub extern "C" fn kmain() -> ! {
     unsafe {
         mem::initialize_bss();
-        trap::configure_mtvec()
+        trap::configure_mtvec();
+        let ctx_addr = task::get_current_context_addr();
+        cpu::write_mscratch(ctx_addr);
     };
 
     println!("Iniciando o Kernel BODE...");
