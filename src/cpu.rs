@@ -99,7 +99,7 @@ pub unsafe fn write_mtvec(addr: usize) {
     unsafe { asm!("csrw mtvec, {}", in(reg) addr, options(nomem, nostack)) };
 }
 
-/// Escreve `mscratch` o endereço de memória do contexto da tarefa vigente.
+/// Escreve `mscratch`: o endereço de memória do contexto da tarefa vigente.
 ///
 /// # Safety
 /// O parâmetro `addr` deve ser um ponteiro alinhado e válido para uma estrutura de

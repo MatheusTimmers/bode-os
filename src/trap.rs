@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::{clint, cpu, println};
+use crate::{clint, cpu, println, task};
 
 pub fn configure_mtvec() {
     let addr = trap_handler as *const () as usize;
@@ -12,7 +12,13 @@ pub extern "C" fn handler() {
     let mcause = cpu::read_mcause();
     if (mcause >> 31) == 1 {
         clint::schedule_next_tick(clint::TICK);
-        println!("TICK");
+
+        unsafe {
+            match task::switch_to_next() {
+                Some(addr) => cpu::write_mscratch(addr),
+                None => println!("nenhuma tarefa pronta"),
+            }
+        }
     } else {
         let mepc = cpu::read_mepc();
         let mtval = cpu::read_mtval();
@@ -75,17 +81,20 @@ pub extern "C" fn trap_handler() -> ! {
         "csrr t1, mepc",
         "sw t1, 0(t0)",
 
-        // 5. Chama o handler
+        // 5. handler roda em cima do contexto da main
+        "la sp, __stack_top",
+
+        // 6. Chama o handler
         "call {h}",
 
-        // 6. lê o mscratch pro t0, pra recuperar a base
+        // 7. lê o mscratch pro t0, pra recuperar a base
         "csrr t0, mscratch",
 
-        // 7. Recupera o mepc
+        // 8. Recupera o mepc
         "lw t1, 0(t0)",
         "csrw mepc, t1",
 
-        // 8. Restaura todos os registradores
+        // 9. Restaura todos os registradores
         "lw x1,  4(t0)",   // ra
         "lw x2,  8(t0)",   // sp
         "lw x3,  12(t0)",  // gp
@@ -117,10 +126,10 @@ pub extern "C" fn trap_handler() -> ! {
         "lw x30, 120(t0)", // t5
         "lw x31, 124(t0)", // t6
 
-        // 9. Por fim, restaura o t0 original
+        // 10. Por fim, restaura o t0 original
         "lw x5,  20(t0)",  // t0 obtém seu valor original de volta
 
-        // 10. Retorna do trap de modo máquina
+        // 11. Retorna do trap de modo máquina
         "mret",
         h = sym handler
     );
