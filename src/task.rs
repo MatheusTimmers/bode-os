@@ -25,14 +25,9 @@ impl Context {
 }
 
 const MAX_TASKS: usize = 10;
-static mut BOOT_CONTEXT: Context = Context::zero();
 static mut CONTEXTS: [Context; MAX_TASKS] = [Context::zero(); MAX_TASKS];
 static mut USED: [bool; MAX_TASKS] = [false; MAX_TASKS];
 static mut CURRENT: usize = 0;
-
-pub unsafe fn boot_context_addr() -> usize {
-    &raw mut BOOT_CONTEXT as usize
-}
 
 pub unsafe fn context_addr(id: usize) -> usize {
     unsafe { &raw mut (CONTEXTS[id]) as usize }

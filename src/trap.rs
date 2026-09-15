@@ -1,10 +1,22 @@
 use core::arch::naked_asm;
 
 use crate::{clint, cpu, println, task};
+use core::panic::PanicInfo;
 
 pub fn configure_mtvec() {
     let addr = trap_handler as *const () as usize;
     unsafe { cpu::write_mtvec(addr) };
+}
+
+#[panic_handler]
+pub fn panic(panic: &PanicInfo<'_>) -> ! {
+    unsafe {
+        cpu::clear_mstatus(cpu::MSTATUS_MIE);
+        cpu::clear_mie(cpu::MIE_MTIE);
+    }
+
+    println!("{}", panic);
+    cpu::halt();
 }
 
 #[unsafe(no_mangle)]
@@ -27,6 +39,7 @@ pub extern "C" fn handler() {
             "Exception: mcause: {:#010x}, mepc: {:#010x}, mtval: {:#010x}",
             mcause, mepc, mtval
         );
+
         cpu::halt();
     }
 }
@@ -81,7 +94,7 @@ pub extern "C" fn trap_handler() -> ! {
         "csrr t1, mepc",
         "sw t1, 0(t0)",
 
-        // 5. handler roda em cima do contexto da main
+        // 5. recupera o contexto do handler
         "la sp, __stack_top",
 
         // 6. Chama o handler

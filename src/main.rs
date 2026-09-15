@@ -9,16 +9,9 @@ mod task;
 mod trap;
 mod uart;
 
-use core::panic::PanicInfo;
-
-#[panic_handler]
-fn panic(panic: &PanicInfo<'_>) -> ! {
-    println!("{}", panic);
-    cpu::halt();
-}
-
 static mut STACK_A: task::Stack = task::Stack::new();
 static mut STACK_B: task::Stack = task::Stack::new();
+static mut STACK_IDLE: task::Stack = task::Stack::new();
 
 extern "C" fn task_a() -> ! {
     loop {
@@ -34,12 +27,23 @@ extern "C" fn task_b() -> ! {
     }
 }
 
+extern "C" fn task_idle() -> ! {
+    loop {
+        cpu::wfi();
+    }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn kmain() -> ! {
+    let idle_ctx;
     unsafe {
         mem::initialize_bss();
         trap::configure_mtvec();
-        cpu::write_mscratch(task::boot_context_addr());
+
+        idle_ctx = match task::task_create(task_idle as *const () as usize, task::stack_top(&raw const STACK_IDLE)) {
+            Some(id) => task::context_addr(id),
+            None => panic!("sem vaga para o Idle"),
+        };
 
         if task::task_create(
             task_a as *const () as usize,
@@ -67,10 +71,8 @@ pub extern "C" fn kmain() -> ! {
     clint::schedule_next_tick(clint::TICK);
     unsafe {
         cpu::set_mie(cpu::MIE_MTIE);
-        cpu::set_mstatus(cpu::MSTATUS_MIE);
+        cpu::set_mstatus(cpu::MSTATUS_MPP_M | cpu::MSTATUS_MPIE);
     }
 
-    loop {
-        cpu::wfi();
-    }
+    cpu::restore_context(idle_ctx)
 }
