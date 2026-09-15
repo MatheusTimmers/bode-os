@@ -22,7 +22,7 @@ pub fn panic(panic: &PanicInfo<'_>) -> ! {
 #[unsafe(no_mangle)]
 pub extern "C" fn handler() {
     let mcause = cpu::read_mcause();
-    if (mcause >> 31) == 1 {
+    if (mcause >> 31) == 1 && (mcause & 0xff) == 7 {
         clint::schedule_next_tick(clint::TICK);
 
         unsafe {

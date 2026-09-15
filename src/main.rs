@@ -1,6 +1,7 @@
 #![no_main]
 #![no_std]
 
+mod board;
 mod boot;
 mod clint;
 mod cpu;
@@ -8,7 +9,6 @@ mod mem;
 mod task;
 mod trap;
 mod uart;
-mod board;
 
 static mut STACK_A: task::Stack = task::Stack::new();
 static mut STACK_B: task::Stack = task::Stack::new();
@@ -41,7 +41,10 @@ pub extern "C" fn kmain() -> ! {
         mem::initialize_bss();
         trap::configure_mtvec();
 
-        idle_ctx = match task::task_create(task_idle as *const () as usize, task::stack_top(&raw const STACK_IDLE)) {
+        idle_ctx = match task::task_create(
+            task_idle as *const () as usize,
+            task::stack_top(&raw const STACK_IDLE),
+        ) {
             Some(id) => task::context_addr(id),
             None => panic!("sem vaga para o Idle"),
         };
@@ -53,7 +56,6 @@ pub extern "C" fn kmain() -> ! {
         .is_none()
         {
             println!("sem vaga para a task A");
-            cpu::halt();
         }
 
         if task::task_create(
@@ -63,13 +65,12 @@ pub extern "C" fn kmain() -> ! {
         .is_none()
         {
             println!("sem vaga para a task B");
-            cpu::halt();
         }
     };
 
     println!("Iniciando o Kernel BODE...");
 
-    clint::schedule_next_tick(clint::TICK);
+    clint::start_schedule_tick(clint::TICK);
     unsafe {
         cpu::set_mie(cpu::MIE_MTIE);
         cpu::set_mstatus(cpu::MSTATUS_MPP_M | cpu::MSTATUS_MPIE);

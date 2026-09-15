@@ -69,3 +69,8 @@ pub fn schedule_next_tick(delta: u64) {
     let next = read_mtimecmp() + delta;
     unsafe { write_mtimecmp(next) };
 }
+
+pub fn start_schedule_tick(delta: u64) {
+    let next = read_mtime() + delta;
+    unsafe { write_mtimecmp(next) };
+}
