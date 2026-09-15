@@ -94,56 +94,18 @@ pub extern "C" fn trap_handler() -> ! {
         "csrr t1, mepc",
         "sw t1, 0(t0)",
 
-        // 5. recupera o contexto do handler
+        // 5. Recupera o contexto do handler
         "la sp, __stack_top",
 
         // 6. Chama o handler
         "call {h}",
 
-        // 7. lê o mscratch pro t0, pra recuperar a base
-        "csrr t0, mscratch",
+        // 7. Lê o mscratch pro a0, pra passar como parametro
+        "csrr a0, mscratch",
 
-        // 8. Recupera o mepc
-        "lw t1, 0(t0)",
-        "csrw mepc, t1",
-
-        // 9. Restaura todos os registradores
-        "lw x1,  4(t0)",   // ra
-        "lw x2,  8(t0)",   // sp
-        "lw x3,  12(t0)",  // gp
-        "lw x4,  16(t0)",  // tp
-        "lw x6,  24(t0)",  // t1
-        "lw x7,  28(t0)",  // t2
-        "lw x8,  32(t0)",  // s0/fp
-        "lw x9,  36(t0)",  // s1
-        "lw x10, 40(t0)",  // a0
-        "lw x11, 44(t0)",  // a1
-        "lw x12, 48(t0)",  // a2
-        "lw x13, 52(t0)",  // a3
-        "lw x14, 56(t0)",  // a4
-        "lw x15, 60(t0)",  // a5
-        "lw x16, 64(t0)",  // a6
-        "lw x17, 68(t0)",  // a7
-        "lw x18, 72(t0)",  // s2
-        "lw x19, 76(t0)",  // s3
-        "lw x20, 80(t0)",  // s4
-        "lw x21, 84(t0)",  // s5
-        "lw x22, 88(t0)",  // s6
-        "lw x23, 92(t0)",  // s7
-        "lw x24, 96(t0)",  // s8
-        "lw x25, 100(t0)", // s9
-        "lw x26, 104(t0)", // s10
-        "lw x27, 108(t0)", // s11
-        "lw x28, 112(t0)", // t3
-        "lw x29, 116(t0)", // t4
-        "lw x30, 120(t0)", // t5
-        "lw x31, 124(t0)", // t6
-
-        // 10. Por fim, restaura o t0 original
-        "lw x5,  20(t0)",  // t0 obtém seu valor original de volta
-
-        // 11. Retorna do trap de modo máquina
-        "mret",
-        h = sym handler
+        // 8. Restaura o contexto
+        "j {r}",
+        h = sym handler,
+        r = sym crate::cpu::restore_context
     );
 }
