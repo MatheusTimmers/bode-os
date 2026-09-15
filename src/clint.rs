@@ -1,8 +1,9 @@
-const CLINT: usize = 0x0200_0000;
+use crate::board::CLINT;
+use crate::board::CLOCK_HZ;
+
 const MTIME_OFFSET: usize = 0xbff8;
 const MTIME_CMP_OFFSET: usize = 0x4000;
 
-pub const CLOCK_HZ: u64 = 10_000_000;
 pub const TICK: u64 = CLOCK_HZ / 10;
 
 pub fn read_mtime() -> u64 {

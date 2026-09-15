@@ -8,6 +8,7 @@ mod mem;
 mod task;
 mod trap;
 mod uart;
+mod board;
 
 static mut STACK_A: task::Stack = task::Stack::new();
 static mut STACK_B: task::Stack = task::Stack::new();

@@ -1,17 +1,22 @@
 use core::fmt::{self, Write};
 
-const THR: *mut u8 = 0x1000_0000 as *mut u8;
-const LSR: *mut u8 = 0x1000_0005 as *mut u8;
+use crate::board::UART;
+
+const THR_OFFSET: usize = 0x0;
+const LSR_OFFSET: usize = 0x5;
 const LSR_MASK: u8 = 1 << 5;
 
 pub struct Uart;
 
 impl Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        let lsr: *mut u8 = (UART + LSR_OFFSET) as *mut u8;
+        let thr: *mut u8 = (UART + THR_OFFSET) as *mut u8;
+
         for &byte in s.as_bytes() {
             unsafe {
-                while LSR.read_volatile() & LSR_MASK == 0b0 {}
-                THR.write_volatile(byte);
+                while lsr.read_volatile() & LSR_MASK == 0b0 {}
+                thr.write_volatile(byte);
             }
         }
         Ok(())
