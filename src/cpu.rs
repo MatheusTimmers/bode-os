@@ -1,4 +1,4 @@
-use core::{arch::{asm, naked_asm}, usize};
+use core::arch::{asm, naked_asm};
 
 /// `mie` bit 7 (MTIE): habilita a interrupção de timer de M-mode.
 pub const MIE_MTIE: usize = 1 << 7;
@@ -6,7 +6,7 @@ pub const MIE_MTIE: usize = 1 << 7;
 /// `mstatus` bit 3 (MIE): chave geral das interrupções em M-mode.
 pub const MSTATUS_MIE: usize = 1 << 3;
 
-pub const MSTATUS_MPIE: usize  = 1 << 7;
+pub const MSTATUS_MPIE: usize = 1 << 7;
 pub const MSTATUS_MPP_M: usize = 0b11 << 11;
 
 #[inline]
@@ -30,10 +30,8 @@ pub extern "C" fn restore_context(addr: usize) -> ! {
     naked_asm!(
         "csrw mscratch, x10",
         "mv t0, x10",
-
         "lw t1, 0(t0)",
         "csrw mepc, t1",
-
         "lw x1,  4(t0)",   // ra
         "lw x2,  8(t0)",   // sp
         "lw x3,  12(t0)",  // gp
@@ -64,9 +62,7 @@ pub extern "C" fn restore_context(addr: usize) -> ! {
         "lw x29, 116(t0)", // t4
         "lw x30, 120(t0)", // t5
         "lw x31, 124(t0)", // t6
-
-        "lw x5,  20(t0)", // t0 obtém seu valor original de volta
-
+        "lw x5,  20(t0)",  // t0 obtém seu valor original de volta
         "mret",
     )
 }

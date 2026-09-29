@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::{clint, cpu, println, task};
+use crate::{clint, cpu, println, scheduler};
 use core::panic::PanicInfo;
 
 pub fn configure_mtvec() {
@@ -26,9 +26,11 @@ pub extern "C" fn handler() {
         clint::schedule_next_tick(clint::TICK);
 
         unsafe {
-            match task::switch_to_next() {
-                Some(addr) => cpu::write_mscratch(addr),
-                None => println!("nenhuma tarefa pronta"),
+            match scheduler::schedule() {
+                Ok(addr) => cpu::write_mscratch(addr),
+                Err(scheduler::Error::NoReadyTask) => {
+                    panic!("Nenhum task pronta: deveria vir o idle")
+                }
             }
         }
     } else {

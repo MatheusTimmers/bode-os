@@ -21,9 +21,8 @@ pub fn read_mtime() -> u64 {
             high_value = high.read_volatile();
 
             if high_value == aux {
-               break;
+                break;
             }
-
         }
     }
 
@@ -45,9 +44,8 @@ pub fn read_mtimecmp() -> u64 {
             high_value = high.read_volatile();
 
             if high_value == aux {
-               break;
+                break;
             }
-
         }
     }
 
