@@ -7,6 +7,7 @@ mod clint;
 mod collections;
 mod cpu;
 mod mem;
+mod pmp;
 mod scheduler;
 mod task;
 mod trap;
@@ -15,20 +16,20 @@ mod uart;
 extern "C" fn task_a() -> ! {
     loop {
         println!("A");
-        cpu::wfi();
+        core::hint::spin_loop();
     }
 }
 
 extern "C" fn task_b() -> ! {
     loop {
         println!("B");
-        cpu::wfi();
+        core::hint::spin_loop();
     }
 }
 
 extern "C" fn task_idle() -> ! {
     loop {
-        cpu::wfi();
+        core::hint::spin_loop();
     }
 }
 
@@ -37,6 +38,7 @@ pub extern "C" fn kmain() -> ! {
     unsafe {
         mem::initialize_bss();
         trap::configure_mtvec();
+        pmp::allow_all();
 
         if task::spawn(task_a).is_err() {
             println!("sem vaga para a task A");
@@ -54,7 +56,8 @@ pub extern "C" fn kmain() -> ! {
     clint::start_schedule_tick(clint::TICK);
     unsafe {
         cpu::set_mie(cpu::MIE_MTIE);
-        cpu::set_mstatus(cpu::MSTATUS_MPP_M | cpu::MSTATUS_MPIE);
+        cpu::clear_mstatus(cpu::MSTATUS_MPP_MASK);
+        cpu::set_mstatus(cpu::MSTATUS_MPIE);
     }
 
     cpu::restore_context(unsafe { scheduler::start() })

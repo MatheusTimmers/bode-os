@@ -7,7 +7,7 @@ pub const MIE_MTIE: usize = 1 << 7;
 pub const MSTATUS_MIE: usize = 1 << 3;
 
 pub const MSTATUS_MPIE: usize = 1 << 7;
-pub const MSTATUS_MPP_M: usize = 0b11 << 11;
+pub const MSTATUS_MPP_MASK: usize = 0b11 << 11;
 
 #[inline]
 pub fn wfi() {
@@ -164,4 +164,25 @@ pub fn read_mscratch() -> usize {
     let value: usize;
     unsafe { asm!("csrr {}, mscratch", out(reg) value, options(nomem, nostack)) };
     value
+}
+
+/// Escreve em `pmpaddr0` os bits do endereço físico para a região PMP.
+///
+/// # Safety
+/// O valor de `addr` deve ser o endereço físico correto deslocado para a direita >> 2
+#[inline]
+pub unsafe fn write_pmpaddr0(addr: usize) {
+    unsafe { asm!("csrw pmpaddr0, {}", in(reg) addr, options(nostack)) };
+}
+
+/// Escreve em `pmpcfg0` as permissões (R/W/X), o modo de endereçamento (A) e o bit de trava (L)
+/// das regras 0 a 3 do PMP, um byte por regra.
+///
+/// # Safety
+/// Com o bit L ligado, a regra passa a valer também para o M-mode e fica travada até o reset:
+/// uma região errada pode tirar do próprio kernel o acesso ao seu código ou aos seus dados.
+/// Com L desligado, a configuração só afeta o U-mode.
+#[inline]
+pub unsafe fn write_pmpcfg0(config: usize) {
+    unsafe { asm!("csrw pmpcfg0, {}", in(reg) config, options(nostack)) };
 }
