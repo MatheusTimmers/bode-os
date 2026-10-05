@@ -30,11 +30,17 @@ pub fn halt() -> ! {
     }
 }
 
+/// Carrega os registradores do `Context` em `addr` e entra na task com `mret`.
+///
+/// # Safety
+/// `addr` deve ser o endereço de um `Context` válido da tabela de tasks, com `mepc` e `sp`
+/// de uma task de verdade. As interrupções devem estar desligadas (`mstatus.MIE = 0`), e
+/// `mstatus.MPP` e `mstatus.MPIE` já devem estar preparados para o `mret`.
 #[unsafe(naked)]
-pub extern "C" fn restore_context(addr: usize) -> ! {
+pub unsafe extern "C" fn restore_context(addr: usize) -> ! {
     naked_asm!(
-        "csrw mscratch, x10",
-        "mv t0, x10",
+        "csrw mscratch, a0",
+        "mv t0, a0",
         "lw t1, 0(t0)",
         "csrw mepc, t1",
         "lw x1,  4(t0)",   // ra
@@ -139,17 +145,6 @@ pub unsafe fn clear_mstatus(mask: usize) {
     unsafe { asm!("csrc mstatus, {}", in(reg) mask, options(nomem, nostack)) };
 }
 
-/// Escreve `mepc`: o endereço para onde o `mret` vai retornar.
-///
-/// # Safety
-/// `addr` tem de ser um endereço de instrução válido e alcançável. Numa
-/// exceção síncrona (`ecall`), retornar para o `mepc` original reexecuta a
-/// instrução que trapou, normalmente soma-se o tamanho dela antes.
-#[inline]
-pub unsafe fn write_mepc(addr: usize) {
-    unsafe { asm!("csrw mepc, {}", in(reg) addr, options(nomem, nostack)) };
-}
-
 /// Escreve `mtvec`: o endereço para onde o processador salta em todo trap.
 ///
 /// # Safety
@@ -169,13 +164,6 @@ pub unsafe fn write_mtvec(addr: usize) {
 #[inline]
 pub unsafe fn write_mscratch(addr: usize) {
     unsafe { asm!("csrw mscratch, {}", in(reg) addr, options(nomem, nostack)) };
-}
-
-#[inline]
-pub fn read_mscratch() -> usize {
-    let value: usize;
-    unsafe { asm!("csrr {}, mscratch", out(reg) value, options(nomem, nostack)) };
-    value
 }
 
 /// Escreve em `pmpaddr0` os bits do endereço físico para a região PMP.

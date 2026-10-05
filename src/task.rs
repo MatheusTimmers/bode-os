@@ -18,7 +18,7 @@ pub enum Error {
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn spawn(entry: extern "C" fn() -> !) -> Result<usize, Error> {
-    let table = unsafe { &mut *(&raw mut TASK_TABLE) };
+    let table = unsafe { table_mut() };
 
     let index = table.spawn(entry)?;
     unsafe { scheduler::enqueue(index) };
@@ -29,39 +29,53 @@ pub unsafe fn spawn(entry: extern "C" fn() -> !) -> Result<usize, Error> {
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn reg(index: usize, reg: usize) -> usize {
-    let table = unsafe { &*(&raw const TASK_TABLE) };
+    let table = unsafe { table() };
     table.slots[index].context.regs[reg]
 }
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn set_reg(index: usize, reg: usize, value: usize) {
-    let table = unsafe { &mut *(&raw mut TASK_TABLE) };
+    let table = unsafe { table_mut() };
     table.slots[index].context.regs[reg] = value;
 }
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn is_ready(index: usize) -> bool {
-    let table = unsafe { &*(&raw const TASK_TABLE) };
+    let table = unsafe { table() };
     table.slots[index].state == State::Ready
 }
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn kill(index: usize) {
-    let table = unsafe { &mut *(&raw mut TASK_TABLE) };
+    let table = unsafe { table_mut() };
     table.slots[index].state = State::Free;
 }
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn context_addr(index: usize) -> usize {
-    let table = unsafe { &mut *(&raw mut TASK_TABLE) };
+    let table = unsafe { table_mut() };
     table.context_addr(index)
 }
 
 static mut TASK_TABLE: TaskTable = TaskTable::new();
+
+/// # Safety
+/// Chamar só com as interrupções desligadas, sem guardar a referência além da função que chamou.
+#[allow(clippy::deref_addrof)]
+unsafe fn table() -> &'static TaskTable {
+    unsafe { &*(&raw const TASK_TABLE) }
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas, sem guardar a referência além da função que chamou.
+#[allow(clippy::deref_addrof)]
+unsafe fn table_mut() -> &'static mut TaskTable {
+    unsafe { &mut *(&raw mut TASK_TABLE) }
+}
 
 struct TaskTable {
     slots: [Task; MAX_TASKS],
@@ -132,6 +146,7 @@ impl Context {
 }
 
 #[repr(align(16))]
+#[allow(dead_code)]
 struct Stack([u8; STACK_SIZE]);
 
 impl Stack {

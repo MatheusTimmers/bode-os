@@ -9,14 +9,14 @@ pub enum Error {
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn enqueue(index: usize) {
-    let scheduler = unsafe { &mut *(&raw mut SCHEDULER) };
+    let scheduler = unsafe { scheduler_mut() };
     scheduler.enqueue(index);
 }
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn start() -> usize {
-    let scheduler = unsafe { &mut *(&raw mut SCHEDULER) };
+    let scheduler = unsafe { scheduler_mut() };
 
     let index = scheduler
         .pop_next()
@@ -28,7 +28,7 @@ pub unsafe fn start() -> usize {
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn schedule() -> Result<usize, Error> {
-    let scheduler = unsafe { &mut *(&raw mut SCHEDULER) };
+    let scheduler = unsafe { scheduler_mut() };
 
     let current = scheduler.current;
     if unsafe { task::is_ready(current) } {
@@ -42,11 +42,25 @@ pub unsafe fn schedule() -> Result<usize, Error> {
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn current() -> usize {
-    let scheduler = unsafe { &*(&raw const SCHEDULER) };
+    let scheduler = unsafe { scheduler() };
     scheduler.current
 }
 
 static mut SCHEDULER: Scheduler = Scheduler::new();
+
+/// # Safety
+/// Chamar só com as interrupções desligadas, sem guardar a referência além da função que chamou.
+#[allow(clippy::deref_addrof)]
+unsafe fn scheduler() -> &'static Scheduler {
+    unsafe { &*(&raw const SCHEDULER) }
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas, sem guardar a referência além da função que chamou.
+#[allow(clippy::deref_addrof)]
+unsafe fn scheduler_mut() -> &'static mut Scheduler {
+    unsafe { &mut *(&raw mut SCHEDULER) }
+}
 
 struct Scheduler {
     ready: Queue<usize, { MAX_TASKS + 1 }>,

@@ -65,6 +65,8 @@ pub unsafe fn write_mtimecmp(value: u64) {
 
 pub fn schedule_next_tick(delta: u64) {
     let next = read_mtimecmp() + delta;
+    let now = read_mtime();
+    let next = if next <= now { now + delta } else { next };
     unsafe { write_mtimecmp(next) };
 }
 

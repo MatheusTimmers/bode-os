@@ -62,5 +62,5 @@ pub extern "C" fn kmain() -> ! {
         cpu::set_mstatus(cpu::MSTATUS_MPIE);
     }
 
-    cpu::restore_context(unsafe { scheduler::start() })
+    unsafe { cpu::restore_context(scheduler::start()) }
 }
