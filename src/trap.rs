@@ -43,19 +43,19 @@ pub extern "C" fn handler(ctx_addr: usize) {
             let current = scheduler::current();
             debug_assert_eq!(ctx_addr, task::context_addr(current));
 
-            task::skip_ecall(current);
-            let request = task::syscall_from_registers(current);
+            syscall::skip_ecall(current);
+            let request = syscall::from_registers(current);
 
             match request.number {
                 syscall::YIELD => {
-                    task::set_syscall_return(current, 0);
+                    syscall::set_return(current, 0);
                     switch_to_next_task();
                 }
                 syscall::WRITE => {
                     let written = syscall::write(request.args[0], request.args[1]);
-                    task::set_syscall_return(current, written);
+                    syscall::set_return(current, written);
                 }
-                _ => task::set_syscall_return(current, syscall::ERROR),
+                _ => syscall::set_return(current, syscall::ERROR),
             }
         },
         _ => {

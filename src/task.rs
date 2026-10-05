@@ -3,6 +3,13 @@ use crate::scheduler;
 pub const MAX_TASKS: usize = 10;
 const STACK_SIZE: usize = 4096;
 
+pub const MEPC: usize = 0;
+pub const SP: usize = 2;
+pub const A0: usize = 10;
+pub const A1: usize = 11;
+pub const A2: usize = 12;
+pub const A7: usize = 17;
+
 #[derive(Debug)]
 pub enum Error {
     NoFreeSlot,
@@ -21,10 +28,16 @@ pub unsafe fn spawn(entry: extern "C" fn() -> !) -> Result<usize, Error> {
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
-pub unsafe fn skip_ecall(index: usize) {
+pub unsafe fn reg(index: usize, reg: usize) -> usize {
+    let table = unsafe { &*(&raw const TASK_TABLE) };
+    table.slots[index].context.regs[reg]
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas.
+pub unsafe fn set_reg(index: usize, reg: usize, value: usize) {
     let table = unsafe { &mut *(&raw mut TASK_TABLE) };
-    let mepc = &mut table.slots[index].context.regs[Context::MEPC];
-    *mepc = mepc.wrapping_add(4);
+    table.slots[index].context.regs[reg] = value;
 }
 
 /// # Safety
@@ -73,8 +86,8 @@ impl TaskTable {
         let index = self.find_free_slot().ok_or(Error::NoFreeSlot)?;
 
         self.slots[index].context = Context::zero();
-        self.slots[index].context.regs[Context::MEPC] = entry as usize;
-        self.slots[index].context.regs[Context::SP] = self.stack_top(index);
+        self.slots[index].context.regs[MEPC] = entry as usize;
+        self.slots[index].context.regs[SP] = self.stack_top(index);
         self.slots[index].state = State::Ready;
 
         Ok(index)
@@ -113,13 +126,6 @@ struct Context {
 }
 
 impl Context {
-    const MEPC: usize = 0;
-    const SP: usize = 2;
-    const A0: usize = 10;
-    const A1: usize = 11;
-    const A2: usize = 12;
-    const A7: usize = 17;
-
     const fn zero() -> Self {
         Self { regs: [0; 32] }
     }
@@ -132,38 +138,4 @@ impl Stack {
     const fn new() -> Self {
         Self([0; STACK_SIZE])
     }
-}
-
-#[derive(Debug)]
-pub struct Syscall {
-    pub number: usize,
-    pub args: [usize; 3],
-}
-
-impl Syscall {
-    pub fn new(number: usize, args: [usize; 3]) -> Self {
-        Self { number, args }
-    }
-}
-
-/// # Safety
-/// Chamar só com as interrupções desligadas.
-pub unsafe fn syscall_from_registers(index: usize) -> Syscall {
-    let table = unsafe { &*(&raw const TASK_TABLE) };
-    let context = &table.slots[index].context;
-    Syscall::new(
-        context.regs[Context::A7],
-        [
-            context.regs[Context::A0],
-            context.regs[Context::A1],
-            context.regs[Context::A2],
-        ],
-    )
-}
-
-/// # Safety
-/// Chamar só com as interrupções desligadas.
-pub unsafe fn set_syscall_return(index: usize, value: usize) {
-    let table = unsafe { &mut *(&raw mut TASK_TABLE) };
-    table.slots[index].context.regs[Context::A0] = value;
 }
