@@ -9,27 +9,29 @@ mod cpu;
 mod mem;
 mod pmp;
 mod scheduler;
+mod syscall;
 mod task;
 mod trap;
 mod uart;
+mod user;
 
 extern "C" fn task_a() -> ! {
     loop {
-        println!("A");
-        core::hint::spin_loop();
+        user::sys_write("A\n");
+        user::sys_yield();
     }
 }
 
 extern "C" fn task_b() -> ! {
     loop {
-        println!("B");
-        core::hint::spin_loop();
+        user::sys_write("B\n");
+        user::sys_yield();
     }
 }
 
 extern "C" fn task_idle() -> ! {
     loop {
-        core::hint::spin_loop();
+        user::sys_yield();
     }
 }
 

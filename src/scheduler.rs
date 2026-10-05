@@ -39,6 +39,13 @@ pub unsafe fn schedule() -> Result<usize, Error> {
     Ok(unsafe { task::context_addr(index) })
 }
 
+/// # Safety
+/// Chamar só com as interrupções desligadas.
+pub unsafe fn current() -> usize {
+    let scheduler = unsafe { &*(&raw const SCHEDULER) };
+    scheduler.current
+}
+
 static mut SCHEDULER: Scheduler = Scheduler::new();
 
 struct Scheduler {

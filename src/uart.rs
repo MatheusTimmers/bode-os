@@ -10,16 +10,20 @@ pub struct Uart;
 
 impl Write for Uart {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        let lsr: *mut u8 = (UART + LSR_OFFSET) as *mut u8;
-        let thr: *mut u8 = (UART + THR_OFFSET) as *mut u8;
-
-        for &byte in s.as_bytes() {
-            unsafe {
-                while lsr.read_volatile() & LSR_MASK == 0b0 {}
-                thr.write_volatile(byte);
-            }
-        }
+        write_bytes(s.as_bytes());
         Ok(())
+    }
+}
+
+pub fn write_bytes(s: &[u8]) {
+    let lsr: *mut u8 = (UART + LSR_OFFSET) as *mut u8;
+    let thr: *mut u8 = (UART + THR_OFFSET) as *mut u8;
+
+    for &byte in s {
+        unsafe {
+            while lsr.read_volatile() & LSR_MASK == 0b0 {}
+            thr.write_volatile(byte);
+        }
     }
 }
 

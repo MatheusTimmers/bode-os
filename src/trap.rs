@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::{clint, cpu, println, scheduler};
+use crate::{clint, cpu, println, scheduler, syscall, task};
 use core::panic::PanicInfo;
 
 pub fn configure_mtvec() {
@@ -19,18 +19,41 @@ pub fn panic(panic: &PanicInfo<'_>) -> ! {
     cpu::halt();
 }
 
+/// # Safety
+/// Chamar só com as interrupções desligadas, de dentro do handler de trap.
+unsafe fn switch_to_next_task() {
+    match unsafe { scheduler::schedule() } {
+        Ok(addr) => unsafe { cpu::write_mscratch(addr) },
+        Err(scheduler::Error::NoReadyTask) => {
+            panic!("Nenhuma task pronta: deveria vir o idle")
+        }
+    }
+}
+
 #[unsafe(no_mangle)]
-pub extern "C" fn handler() {
+pub extern "C" fn handler(ctx_addr: usize) {
     let mcause = cpu::read_mcause();
     if (mcause >> 31) == 1 && (mcause & 0xff) == 7 {
         clint::schedule_next_tick(clint::TICK);
-
+        unsafe { switch_to_next_task() };
+    } else if mcause == 8 {
         unsafe {
-            match scheduler::schedule() {
-                Ok(addr) => cpu::write_mscratch(addr),
-                Err(scheduler::Error::NoReadyTask) => {
-                    panic!("Nenhum task pronta: deveria vir o idle")
+            let current = scheduler::current();
+            debug_assert_eq!(ctx_addr, task::context_addr(current));
+
+            task::skip_ecall(current);
+            let request = task::syscall_from_registers(current);
+
+            match request.number {
+                syscall::YIELD => {
+                    task::set_syscall_return(current, 0);
+                    switch_to_next_task();
                 }
+                syscall::WRITE => {
+                    let written = syscall::write(request.args[0], request.args[1]);
+                    task::set_syscall_return(current, written);
+                }
+                _ => task::set_syscall_return(current, syscall::ERROR),
             }
         }
     } else {
@@ -100,6 +123,7 @@ pub extern "C" fn trap_handler() -> ! {
         "la sp, __stack_top",
 
         // 6. Chama o handler
+        "mv a0, t0",
         "call {h}",
 
         // 7. Lê o mscratch pro a0, pra passar como parametro
