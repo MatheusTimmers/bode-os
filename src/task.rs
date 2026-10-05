@@ -36,6 +36,13 @@ pub unsafe fn is_ready(index: usize) -> bool {
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
+pub unsafe fn kill(index: usize) {
+    let table = unsafe { &mut *(&raw mut TASK_TABLE) };
+    table.slots[index].state = State::Free;
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas.
 pub unsafe fn context_addr(index: usize) -> usize {
     let table = unsafe { &mut *(&raw mut TASK_TABLE) };
     table.context_addr(index)

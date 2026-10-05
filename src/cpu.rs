@@ -8,6 +8,11 @@ pub const MSTATUS_MIE: usize = 1 << 3;
 
 pub const MSTATUS_MPIE: usize = 1 << 7;
 pub const MSTATUS_MPP_MASK: usize = 0b11 << 11;
+pub const MSTATUS_MPP_USER: usize = 0b00 << 11;
+
+pub const MCAUSE_INTERRUPT: usize = 1 << 31;
+pub const MCAUSE_MACHINE_TIMER: usize = MCAUSE_INTERRUPT | 7;
+pub const MCAUSE_ECALL_FROM_USER: usize = 8;
 
 #[inline]
 pub fn wfi() {
@@ -85,6 +90,13 @@ pub fn read_mepc() -> usize {
 pub fn read_mtval() -> usize {
     let value: usize;
     unsafe { asm!("csrr {}, mtval", out(reg) value, options(nomem, nostack)) };
+    value
+}
+
+#[inline]
+pub fn read_mstatus() -> usize {
+    let value: usize;
+    unsafe { asm!("csrr {}, mstatus", out(reg) value, options(nomem, nostack)) };
     value
 }
 

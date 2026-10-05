@@ -10,12 +10,13 @@ pub fn configure_mtvec() {
 
 #[panic_handler]
 pub fn panic(panic: &PanicInfo<'_>) -> ! {
+    println!("{}", panic);
+
     unsafe {
         cpu::clear_mstatus(cpu::MSTATUS_MIE);
         cpu::clear_mie(cpu::MIE_MTIE);
     }
 
-    println!("{}", panic);
     cpu::halt();
 }
 
@@ -33,11 +34,12 @@ unsafe fn switch_to_next_task() {
 #[unsafe(no_mangle)]
 pub extern "C" fn handler(ctx_addr: usize) {
     let mcause = cpu::read_mcause();
-    if (mcause >> 31) == 1 && (mcause & 0xff) == 7 {
-        clint::schedule_next_tick(clint::TICK);
-        unsafe { switch_to_next_task() };
-    } else if mcause == 8 {
-        unsafe {
+    match mcause {
+        cpu::MCAUSE_MACHINE_TIMER => {
+            clint::schedule_next_tick(clint::TICK);
+            unsafe { switch_to_next_task() };
+        }
+        cpu::MCAUSE_ECALL_FROM_USER => unsafe {
             let current = scheduler::current();
             debug_assert_eq!(ctx_addr, task::context_addr(current));
 
@@ -55,17 +57,30 @@ pub extern "C" fn handler(ctx_addr: usize) {
                 }
                 _ => task::set_syscall_return(current, syscall::ERROR),
             }
+        },
+        _ => {
+            let mepc = cpu::read_mepc();
+            let mtval = cpu::read_mtval();
+            let from_user = cpu::read_mstatus() & cpu::MSTATUS_MPP_MASK == cpu::MSTATUS_MPP_USER;
+
+            if from_user {
+                unsafe {
+                    let current = scheduler::current();
+                    println!(
+                        "task {} encerrada: mcause: {:#010x}, mepc: {:#010x}, mtval: {:#010x}",
+                        current, mcause, mepc, mtval
+                    );
+                    task::kill(current);
+                    switch_to_next_task();
+                }
+            } else {
+                println!(
+                    "Exception no kernel: mcause: {:#010x}, mepc: {:#010x}, mtval: {:#010x}",
+                    mcause, mepc, mtval
+                );
+                cpu::halt();
+            }
         }
-    } else {
-        let mepc = cpu::read_mepc();
-        let mtval = cpu::read_mtval();
-
-        println!(
-            "Exception: mcause: {:#010x}, mepc: {:#010x}, mtval: {:#010x}",
-            mcause, mepc, mtval
-        );
-
-        cpu::halt();
     }
 }
 
