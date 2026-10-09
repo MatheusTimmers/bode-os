@@ -15,6 +15,13 @@ pub unsafe fn enqueue(index: usize) {
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
+pub unsafe fn set_idle(index: usize) {
+    let scheduler = unsafe { scheduler_mut() };
+    scheduler.idle = Some(index);
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas.
 pub unsafe fn start() -> usize {
     let scheduler = unsafe { scheduler_mut() };
 
@@ -31,7 +38,7 @@ pub unsafe fn schedule() -> Result<usize, Error> {
     let scheduler = unsafe { scheduler_mut() };
 
     let current = scheduler.current;
-    if unsafe { task::is_ready(current) } {
+    if scheduler.idle != Some(current) && unsafe { task::is_ready(current) } {
         scheduler.enqueue(current);
     }
 
@@ -65,6 +72,7 @@ unsafe fn scheduler_mut() -> &'static mut Scheduler {
 struct Scheduler {
     ready: Queue<usize, { MAX_TASKS + 1 }>,
     current: usize,
+    idle: Option<usize>,
 }
 
 impl Scheduler {
@@ -72,6 +80,7 @@ impl Scheduler {
         Self {
             current: 0,
             ready: Queue::new(),
+            idle: None,
         }
     }
 
@@ -82,7 +91,11 @@ impl Scheduler {
     }
 
     fn pop_next(&mut self) -> Result<usize, Error> {
-        let index = self.ready.pop().ok_or(Error::NoReadyTask)?;
+        let index = self
+            .ready
+            .pop()
+            .or_else(|| self.idle.filter(|&idle| unsafe { task::is_ready(idle) }))
+            .ok_or(Error::NoReadyTask)?;
         self.current = index;
         Ok(index)
     }

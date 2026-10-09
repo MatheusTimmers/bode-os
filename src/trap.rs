@@ -41,6 +41,7 @@ pub extern "C" fn handler(ctx_addr: usize) {
             match request.number {
                 syscall::YIELD => {
                     syscall::set_return(current, 0);
+                    clint::start_schedule_tick(clint::TICK);
                     switch_to_next_task();
                 }
                 syscall::WRITE => {

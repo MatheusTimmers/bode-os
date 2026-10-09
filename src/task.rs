@@ -28,6 +28,17 @@ pub unsafe fn spawn(entry: extern "C" fn() -> !) -> Result<usize, Error> {
 
 /// # Safety
 /// Chamar só com as interrupções desligadas.
+pub unsafe fn spawn_idle(entry: extern "C" fn() -> !) -> Result<usize, Error> {
+    let table = unsafe { table_mut() };
+
+    let index = table.spawn(entry)?;
+    unsafe { scheduler::set_idle(index) };
+
+    Ok(index)
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas.
 pub unsafe fn reg(index: usize, reg: usize) -> usize {
     let table = unsafe { table() };
     table.slots[index].context.regs[reg]

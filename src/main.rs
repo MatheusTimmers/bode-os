@@ -57,7 +57,7 @@ pub extern "C" fn kmain() -> ! {
             println!("sem vaga para a task B");
         }
 
-        task::spawn(task_idle).expect("sem vaga para o Idle");
+        task::spawn_idle(task_idle).expect("sem vaga para o Idle");
     };
 
     println!("Iniciando o Kernel BODE...");
