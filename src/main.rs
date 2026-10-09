@@ -4,7 +4,6 @@
 mod board;
 mod boot;
 mod clint;
-mod collections;
 mod cpu;
 mod mem;
 mod pmp;

@@ -1,5 +1,5 @@
-use crate::collections::queue::Queue;
 use crate::task::{self, MAX_TASKS};
+use bode_os::collections::queue::Queue;
 
 #[derive(Debug)]
 pub enum Error {
