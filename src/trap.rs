@@ -86,37 +86,9 @@ pub extern "C" fn trap_handler() -> ! {
         "csrrw t0, mscratch, t0",
 
         // 2. Salva todos os registradores
-        "sw x1,  4(t0)",   // ra
-        "sw x2,  8(t0)",   // sp
-        "sw x3,  12(t0)",  // gp
-        "sw x4,  16(t0)",  // tp
-        // x5 (t0) será salvo mais tarde
-        "sw x6,  24(t0)",  // t1
-        "sw x7,  28(t0)",  // t2
-        "sw x8,  32(t0)",  // s0/fp
-        "sw x9,  36(t0)",  // s1
-        "sw x10, 40(t0)",  // a0
-        "sw x11, 44(t0)",  // a1
-        "sw x12, 48(t0)",  // a2
-        "sw x13, 52(t0)",  // a3
-        "sw x14, 56(t0)",  // a4
-        "sw x15, 60(t0)",  // a5
-        "sw x16, 64(t0)",  // a6
-        "sw x17, 68(t0)",  // a7
-        "sw x18, 72(t0)",  // s2
-        "sw x19, 76(t0)",  // s3
-        "sw x20, 80(t0)",  // s4
-        "sw x21, 84(t0)",  // s5
-        "sw x22, 88(t0)",  // s6
-        "sw x23, 92(t0)",  // s7
-        "sw x24, 96(t0)",  // s8
-        "sw x25, 100(t0)", // s9
-        "sw x26, 104(t0)", // s10
-        "sw x27, 108(t0)", // s11
-        "sw x28, 112(t0)", // t3
-        "sw x29, 116(t0)", // t4
-        "sw x30, 120(t0)", // t5
-        "sw x31, 124(t0)", // t6
+        ".irp n, 1,2,3,4,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31",
+        "sw x\\n, (\\n*4)(t0)",
+        ".endr",
 
         // 3. Recupera o t0 original e salva no offset 20
         "csrrw t1, mscratch, t0", // t1 recebe o t0 original. mscratch volta a apontar para Context.
