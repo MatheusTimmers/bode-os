@@ -1,3 +1,5 @@
+use core::ops::Range;
+
 use crate::scheduler;
 
 pub const MAX_TASKS: usize = 10;
@@ -68,11 +70,19 @@ pub unsafe fn kill(index: usize) {
 /// # Safety
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn context_addr(index: usize) -> usize {
-    let table = unsafe { table_mut() };
+    let table = unsafe { table() };
     table.context_addr(index)
 }
 
 static mut TASK_TABLE: TaskTable = TaskTable::new();
+
+#[unsafe(link_section = ".user_stacks")]
+static mut USER_STACKS: [Stack; MAX_TASKS] = [const { Stack::new() }; MAX_TASKS];
+
+pub fn stack_range(index: usize) -> Range<usize> {
+    let base = unsafe { &raw const USER_STACKS[index] }.addr();
+    base..base + core::mem::size_of::<Stack>()
+}
 
 /// # Safety
 /// Chamar só com as interrupções desligadas, sem guardar a referência além da função que chamou.
@@ -99,10 +109,6 @@ impl TaskTable {
         }
     }
 
-    fn stack_top(&self, index: usize) -> usize {
-        &raw const self.slots[index].stack as usize + core::mem::size_of::<Stack>()
-    }
-
     fn find_free_slot(&self) -> Option<usize> {
         (0..MAX_TASKS).find(|&i| self.slots[i].state == State::Free)
     }
@@ -112,14 +118,14 @@ impl TaskTable {
 
         self.slots[index].context = Context::zero();
         self.slots[index].context.regs[MEPC] = entry as usize;
-        self.slots[index].context.regs[SP] = self.stack_top(index);
+        self.slots[index].context.regs[SP] = stack_range(index).end;
         self.slots[index].state = State::Ready;
 
         Ok(index)
     }
 
-    fn context_addr(&mut self, index: usize) -> usize {
-        &raw mut (self.slots[index].context) as usize
+    fn context_addr(&self, index: usize) -> usize {
+        &raw const self.slots[index].context as usize
     }
 }
 
@@ -131,7 +137,6 @@ enum State {
 
 struct Task {
     context: Context,
-    stack: Stack,
     state: State,
 }
 
@@ -139,7 +144,6 @@ impl Task {
     const fn new() -> Self {
         Self {
             context: Context::zero(),
-            stack: Stack::new(),
             state: State::Free,
         }
     }
@@ -156,7 +160,7 @@ impl Context {
     }
 }
 
-#[repr(align(16))]
+#[repr(align(4096))]
 #[allow(dead_code)]
 struct Stack([u8; STACK_SIZE]);
 

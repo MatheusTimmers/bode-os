@@ -1,6 +1,11 @@
+use core::ops::Range;
+
 unsafe extern "C" {
     static mut __bss: u8;
     static __bss_end: u8;
+    static __text_start: u8;
+    static __text_end: u8;
+    static __rodata_end: u8;
 }
 
 /// Zera a região .bss.
@@ -13,4 +18,20 @@ pub unsafe fn initialize_bss() {
 
     let size = bss_end.addr() - bss_start.addr();
     unsafe { bss_start.write_bytes(0, size) };
+}
+
+pub fn text_start() -> usize {
+    (&raw const __text_start).addr()
+}
+
+pub fn text_end() -> usize {
+    (&raw const __text_end).addr()
+}
+
+pub fn rodata_end() -> usize {
+    (&raw const __rodata_end).addr()
+}
+
+pub fn user_shared() -> Range<usize> {
+    text_start()..rodata_end()
 }

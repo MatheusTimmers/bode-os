@@ -2,6 +2,7 @@ ENTRY(boot)
 
 SECTIONS {
     . = 0x80000000;
+    __text_start = .;
 
     .text :{
         KEEP(*(.text.boot));
@@ -10,8 +11,18 @@ SECTIONS {
         *(.text .text.*);
     }
 
+    . = ALIGN(4);
+    __text_end = .;
+
     .rodata : ALIGN(4) {
         *(.rodata .rodata.* .srodata .srodata.*);
+    }
+
+    . = ALIGN(4);
+    __rodata_end = .;
+
+    .user_stacks (NOLOAD) : ALIGN(16) {
+        KEEP(*(.user_stacks));
     }
 
     .data : ALIGN(4) {

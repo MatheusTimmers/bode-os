@@ -139,13 +139,19 @@ pub unsafe fn write_mscratch(addr: usize) {
     unsafe { asm!("csrw mscratch, {}", in(reg) addr, options(nomem, nostack)) };
 }
 
-/// Escreve em `pmpaddr0` os bits do endereço físico para a região PMP.
-///
 /// # Safety
 /// O valor de `addr` deve ser o endereço físico correto deslocado para a direita >> 2
 #[inline]
-pub unsafe fn write_pmpaddr0(addr: usize) {
-    unsafe { asm!("csrw pmpaddr0, {}", in(reg) addr, options(nostack)) };
+pub unsafe fn write_pmpaddr(index: usize, addr: usize) {
+    unsafe {
+        match index {
+            0 => asm!("csrw pmpaddr0, {}", in(reg) addr, options(nostack)),
+            1 => asm!("csrw pmpaddr1, {}", in(reg) addr, options(nostack)),
+            2 => asm!("csrw pmpaddr2, {}", in(reg) addr, options(nostack)),
+            3 => asm!("csrw pmpaddr3, {}", in(reg) addr, options(nostack)),
+            _ => panic!("pmpaddr{} fora de pmpcfg0", index),
+        }
+    }
 }
 
 /// Escreve em `pmpcfg0` as permissões (R/W/X), o modo de endereçamento (A) e o bit de trava (L)

@@ -47,7 +47,7 @@ pub extern "C" fn kmain() -> ! {
     unsafe {
         mem::initialize_bss();
         trap::configure_mtvec();
-        pmp::allow_all();
+        pmp::protect_kernel();
 
         if task::spawn(task_a).is_err() {
             println!("sem vaga para a task A");
@@ -69,5 +69,9 @@ pub extern "C" fn kmain() -> ! {
         cpu::set_mstatus(cpu::MSTATUS_MPIE);
     }
 
-    unsafe { cpu::restore_context(scheduler::start()) }
+    unsafe {
+        let context = scheduler::start();
+        pmp::allow_stack(task::stack_range(scheduler::current()));
+        cpu::restore_context(context)
+    }
 }

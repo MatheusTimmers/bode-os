@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::{clint, cpu, println, scheduler, syscall, task};
+use crate::{clint, cpu, pmp, println, scheduler, syscall, task};
 
 static mut BOOT_CONTEXT: [usize; 32] = [0; 32];
 
@@ -16,7 +16,10 @@ pub fn configure_mtvec() {
 /// Chamar só com as interrupções desligadas, de dentro do handler de trap.
 unsafe fn switch_to_next_task() {
     match unsafe { scheduler::schedule() } {
-        Ok(addr) => unsafe { cpu::write_mscratch(addr) },
+        Ok(addr) => unsafe {
+            pmp::allow_stack(task::stack_range(scheduler::current()));
+            cpu::write_mscratch(addr)
+        },
         Err(scheduler::Error::NoReadyTask) => {
             panic!("Nenhuma task pronta: deveria vir o idle")
         }
@@ -45,7 +48,7 @@ pub extern "C" fn handler(ctx_addr: usize) {
                     switch_to_next_task();
                 }
                 syscall::WRITE => {
-                    let written = syscall::write(request.args[0], request.args[1]);
+                    let written = syscall::write(current, request.args[0], request.args[1]);
                     syscall::set_return(current, written);
                 }
                 _ => syscall::set_return(current, syscall::ERROR),
