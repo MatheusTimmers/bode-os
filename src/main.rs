@@ -1,6 +1,8 @@
 #![no_main]
 #![no_std]
 
+use core::panic::PanicInfo;
+
 mod board;
 mod boot;
 mod clint;
@@ -32,6 +34,12 @@ extern "C" fn task_idle() -> ! {
     loop {
         user::sys_yield();
     }
+}
+
+#[panic_handler]
+fn panic(info: &PanicInfo<'_>) -> ! {
+    println!("{}", info);
+    cpu::halt();
 }
 
 #[unsafe(no_mangle)]

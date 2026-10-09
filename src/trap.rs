@@ -1,23 +1,15 @@
 use core::arch::naked_asm;
 
 use crate::{clint, cpu, println, scheduler, syscall, task};
-use core::panic::PanicInfo;
+
+static mut BOOT_CONTEXT: [usize; 32] = [0; 32];
 
 pub fn configure_mtvec() {
     let addr = trap_handler as *const () as usize;
-    unsafe { cpu::write_mtvec(addr) };
-}
-
-#[panic_handler]
-pub fn panic(panic: &PanicInfo<'_>) -> ! {
-    println!("{}", panic);
-
     unsafe {
-        cpu::clear_mstatus(cpu::MSTATUS_MIE);
-        cpu::clear_mie(cpu::MIE_MTIE);
+        cpu::write_mscratch(&raw mut BOOT_CONTEXT as usize);
+        cpu::write_mtvec(addr);
     }
-
-    cpu::halt();
 }
 
 /// # Safety
