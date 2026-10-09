@@ -30,6 +30,7 @@ fi
 qemu-system-riscv32 \
     -machine virt \
     -bios none \
+    -m 128M \
     -nographic \
     "${GDB[@]}" \
     -kernel "$KERNEL"

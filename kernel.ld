@@ -11,11 +11,11 @@ SECTIONS {
     }
 
     .rodata : ALIGN(4) {
-        *(.rodata .rodata.*);
+        *(.rodata .rodata.* .srodata .srodata.*);
     }
 
     .data : ALIGN(4) {
-        *(.data .data.*);
+        *(.data .data.* .sdata .sdata.*);
     }
 
     .bss : ALIGN(4) {
@@ -27,4 +27,10 @@ SECTIONS {
     . = ALIGN(16);
     . += 128 * 1024; /* 128KB */
     __stack_top = .;
+
+    /DISCARD/ : {
+        *(.eh_frame .eh_frame_hdr)
+    }
 }
+
+ASSERT(__stack_top <= 0x88000000, "o kernel nao cabe nos 128 MB de RAM")
