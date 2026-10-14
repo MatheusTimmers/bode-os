@@ -36,7 +36,8 @@ SECTIONS {
     }
 
     . = ALIGN(16);
-    . += 128 * 1024; /* 128KB */
+    __kernel_stack_bottom = .;
+    . += 4 * 1024;
     __stack_top = .;
 
     /DISCARD/ : {

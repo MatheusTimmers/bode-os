@@ -3,7 +3,7 @@ use core::ops::Range;
 use crate::scheduler;
 
 pub const MAX_TASKS: usize = 10;
-const STACK_SIZE: usize = 4096;
+const STACK_SIZE: usize = 1024;
 
 pub const MEPC: usize = 0;
 pub const SP: usize = 2;
@@ -160,7 +160,7 @@ impl Context {
     }
 }
 
-#[repr(align(4096))]
+#[repr(align(1024))]
 #[allow(dead_code)]
 struct Stack([u8; STACK_SIZE]);
 
@@ -169,3 +169,5 @@ impl Stack {
         Self([0; STACK_SIZE])
     }
 }
+
+const _: () = assert!(STACK_SIZE.is_power_of_two() && core::mem::align_of::<Stack>() == STACK_SIZE);

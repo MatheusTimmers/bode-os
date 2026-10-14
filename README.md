@@ -62,7 +62,7 @@ encerra a task.
 Cada regra TOR vale de `pmpaddr[i-1]` até `pmpaddr[i]`, por isso `.text` e
 `.rodata` ficam juntas e nessa ordem no `kernel.ld`. A regra NAPOT exige que a
 pilha seja potência de 2 e alinhada ao próprio tamanho (`Stack` tem
-`align(4096)`). O bit L fica desligado: o M-mode continua com acesso a tudo.
+`align(1024)`). O bit L fica desligado: o M-mode continua com acesso a tudo.
 
 Limitação atual:
 

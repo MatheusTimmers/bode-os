@@ -46,6 +46,7 @@ fn panic(info: &PanicInfo<'_>) -> ! {
 pub extern "C" fn kmain() -> ! {
     unsafe {
         mem::initialize_bss();
+        mem::plant_stack_canary();
         trap::configure_mtvec();
         pmp::protect_kernel();
 

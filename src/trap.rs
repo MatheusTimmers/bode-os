@@ -1,6 +1,6 @@
 use core::arch::naked_asm;
 
-use crate::{clint, cpu, pmp, println, scheduler, syscall, task};
+use crate::{clint, cpu, mem, pmp, println, scheduler, syscall, task};
 
 static mut BOOT_CONTEXT: [usize; 32] = [0; 32];
 
@@ -28,6 +28,10 @@ unsafe fn switch_to_next_task() {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn handler(ctx_addr: usize) {
+    if !mem::stack_canary_intact() {
+        panic!("pilha do kernel estourou");
+    }
+
     let mcause = cpu::read_mcause();
     match mcause {
         cpu::MCAUSE_MACHINE_TIMER => {

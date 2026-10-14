@@ -6,7 +6,10 @@ unsafe extern "C" {
     static __text_start: u8;
     static __text_end: u8;
     static __rodata_end: u8;
+    static mut __kernel_stack_bottom: usize;
 }
+
+const STACK_CANARY: usize = 0x5AFE_C0DE;
 
 /// Zera a região .bss.
 ///
@@ -34,4 +37,14 @@ pub fn rodata_end() -> usize {
 
 pub fn user_shared() -> Range<usize> {
     text_start()..rodata_end()
+}
+
+/// # Safety
+/// Chamar uma vez no boot, depois de `initialize_bss`.
+pub unsafe fn plant_stack_canary() {
+    unsafe { (&raw mut __kernel_stack_bottom).write_volatile(STACK_CANARY) };
+}
+
+pub fn stack_canary_intact() -> bool {
+    unsafe { (&raw const __kernel_stack_bottom).read_volatile() == STACK_CANARY }
 }
