@@ -71,6 +71,7 @@ pub extern "C" fn handler(ctx_addr: usize) {
                         current, mcause, mepc, mtval
                     );
                     task::kill(current);
+                    clint::start_schedule_tick(clint::TICK);
                     switch_to_next_task();
                 }
             } else {
