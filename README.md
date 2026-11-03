@@ -10,7 +10,8 @@ CLINT, o escalonador é round-robin e as tasks falam com o kernel por `ecall`
 ## Pré-requisitos
 
 - [rustup](https://rustup.rs). O `rust-toolchain.toml` instala sozinho a
-  toolchain, o target `riscv32imac-unknown-none-elf`, o `clippy` e o `rustfmt`.
+  toolchain fixada (rustc 1.99.0), o target `riscv32imac-unknown-none-elf`, o
+  `clippy` e o `rustfmt`.
 - QEMU com suporte a RISC-V (`qemu-system-riscv32`):
   - Debian/Ubuntu: `sudo apt install qemu-system-misc`
   - macOS: `brew install qemu`
@@ -64,10 +65,30 @@ Cada regra TOR vale de `pmpaddr[i-1]` até `pmpaddr[i]`, por isso `.text` e
 pilha seja potência de 2 e alinhada ao próprio tamanho (`Stack` tem
 `align(1024)`). O bit L fica desligado: o M-mode continua com acesso a tudo.
 
-Limitação atual:
+A pilha do kernel (4 KB) fica logo acima do `.bss` e tem um canário na última
+palavra, conferido na entrada de cada trap.
+
+Limitações atuais:
 
 - Tasks não podem usar variáveis globais (`static mut`): elas ficam em
   `.data`/`.bss`, fora do alcance do U-mode.
+- A syscall `write` espera a UART byte a byte com as interrupções desligadas,
+  sem limite de tamanho.
+- Um pânico dentro de uma task aparece como falha de acesso na UART, não com a
+  mensagem do pânico.
+
+## Alocadores
+
+`src/allocators/` tem quatro alocadores atrás do trait `Allocator`
+(`alloc`/`dealloc` com `Layout`), testados no host pelas macros
+`contract_tests!` e `reuse_tests!`. O kernel ainda não usa nenhum deles.
+
+| Alocador | Ideia |
+|---|---|
+| `bump` | avança um ponteiro; só libera tudo de uma vez |
+| `pool` | blocos de tamanho fixo numa lista livre |
+| `buddy` | blocos potência de 2 (0x10 a 0x1_0000), par achado por `addr ^ size`, bitmap no próprio heap |
+| `tlsf` | listas segregadas em dois níveis (SLI 4), busca O(1) por bitmap e junção com os vizinhos físicos |
 
 ## Mapa do código
 
@@ -86,4 +107,6 @@ Limitação atual:
 | `src/pmp.rs` | Proteção de memória física (PMP) para o U-mode |
 | `src/uart.rs` | Saída serial e as macros `print!`/`println!` |
 | `src/board.rs` | Endereços da máquina `virt` do QEMU |
+| `src/mem.rs` | Zera o `.bss`, canário da pilha do kernel e faixas de memória do usuário |
 | `src/collections/` | Estruturas sem dependência de hardware (testadas no host) |
+| `src/allocators/` | Bump, pool, buddy e TLSF (testados no host) |
