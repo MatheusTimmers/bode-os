@@ -60,23 +60,27 @@ fusesoc --cores-root=. run --target=sim --tool=verilator --setup --build lowrisc
 O target é um só (`riscv32imc`, sem a extensão A, porque o Ibex não a tem); a
 feature `ibex` escolhe a placa. O `build.rs` passa o `kernel.ld` comum e põe
 `boards/virt/` ou `boards/ibex/` no caminho de busca do linker, de onde o
-`INCLUDE board.ld` tira `RAM_START`, `RAM_SIZE` e `BOOT_OFFSET`.
+`INCLUDE board.ld` tira `RAM_START`, `RAM_SIZE` e `BOOT_OFFSET`, e o
+`INCLUDE text_start.ld` tira a ordem do início do `.text`.
 
 | | QEMU `virt` | Ibex Demo System |
 |---|---|---|
 | RAM | `0x8000_0000`, 128 MB | `0x0010_0000`, 64 KiB |
 | primeira instrução (`boot`) | `0x8000_0000` | `0x0010_0080` |
+| tabela de vetores | `0x8000_0100` | `0x0010_0000` |
 | UART | NS16550A em `0x1000_0000` | `0x8000_1000` (TX `+0x4`, status `+0x8`) |
 | `mtime` / `mtimecmp` | `0x0200_bff8` / `0x0200_4000` | `0x8000_2000` / `0x8000_2008` |
 | clock do timer | 10 MHz | 27 MHz (1 por ciclo) |
 
 O QEMU com `-bios none` ignora o entry point do ELF e salta para o início da
-RAM; o Ibex começa em `boot_addr + 0x80`. Daí o `BOOT_OFFSET`.
+RAM; o Ibex começa em `boot_addr + 0x80`. No Ibex, a tabela de vetores fica no
+início da RAM, como nos programas do Ibex Demo System, e ocupa exatamente os
+`0x80` bytes antes do `boot`.
 
 O `mtvec` usa o modo vetorado nas duas placas, porque o Ibex só aceita esse
 modo e despreza os 8 bits baixos da base. A tabela (`trap::vector_table`) tem
-32 entradas de 4 bytes, todas com `j trap_handler`, e fica no primeiro
-múltiplo de 256 depois do `boot`. O `.option norvc` impede que a extensão C
+32 entradas de 4 bytes, todas com `j trap_handler`, e sua base é múltipla de
+`0x100`. O `.option norvc` impede que a extensão C
 encurte alguma entrada para 2 bytes.
 
 ## Testes
@@ -142,7 +146,7 @@ Limitações atuais:
 | Arquivo | Papel |
 |---|---|
 | `kernel.ld` | Layout de memória: onde ficam código, dados e pilha |
-| `boards/*/board.ld` | Início e tamanho da RAM e deslocamento do `boot` de cada placa |
+| `boards/*/` | Por placa: início e tamanho da RAM, posição do `boot` e ordem do início do `.text` |
 | `build.rs` | Escolhe o `board.ld` pela feature e passa o linker script |
 | `run.sh` / `run-ibex.sh` | Runners do `cargo run`: QEMU e simulador do Ibex |
 | `scripts/vmem.sh` | Converte o ELF do Ibex no `.vmem` da FPGA |

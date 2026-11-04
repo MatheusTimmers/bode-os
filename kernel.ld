@@ -3,13 +3,11 @@ INCLUDE board.ld
 ENTRY(boot)
 
 SECTIONS {
-    . = RAM_START + BOOT_OFFSET;
+    . = RAM_START;
     __text_start = .;
 
     .text :{
-        KEEP(*(.text.boot));
-        . = ALIGN(256);
-        KEEP(*(.text.vectors));
+        INCLUDE text_start.ld
         . = ALIGN(4);
         KEEP(*(.text.trap));
         *(.text .text.*);

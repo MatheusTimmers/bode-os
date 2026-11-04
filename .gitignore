@@ -6,3 +6,6 @@
 *.log
 *.dtb
 *.dts
+
+# saida do simulador do Ibex
+ibex_demo_system_pcount.csv

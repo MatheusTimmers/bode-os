@@ -12,4 +12,6 @@ if [[ ! -x "$SIM" ]]; then
     exit 1
 fi
 
-exec "$SIM" --meminit=ram,"$KERNEL" +UARTDPI_LOG_uart0=-
+"$ROOT/scripts/vmem.sh" "$KERNEL" "$KERNEL.vmem" >/dev/null
+
+exec "$SIM" --meminit=ram,"$KERNEL.vmem" +UARTDPI_LOG_uart0=-
