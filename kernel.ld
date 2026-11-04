@@ -1,11 +1,15 @@
+INCLUDE board.ld
+
 ENTRY(boot)
 
 SECTIONS {
-    . = 0x80000000;
+    . = RAM_START + BOOT_OFFSET;
     __text_start = .;
 
     .text :{
         KEEP(*(.text.boot));
+        . = ALIGN(256);
+        KEEP(*(.text.vectors));
         . = ALIGN(4);
         KEEP(*(.text.trap));
         *(.text .text.*);
@@ -45,4 +49,5 @@ SECTIONS {
     }
 }
 
-ASSERT(__stack_top <= 0x88000000, "o kernel nao cabe nos 128 MB de RAM")
+ASSERT(__stack_top <= RAM_START + RAM_SIZE, "o kernel nao cabe na RAM")
+ASSERT(boot == RAM_START + BOOT_OFFSET, "boot no local errado")

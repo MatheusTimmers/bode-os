@@ -1,17 +1,13 @@
-use crate::board::CLINT;
-use crate::board::CLOCK_HZ;
-
-const MTIME_OFFSET: usize = 0xbff8;
-const MTIME_CMP_OFFSET: usize = 0x4000;
+use crate::board::{CLOCK_HZ, MTIME, MTIMECMP};
 
 pub const TICK: u64 = CLOCK_HZ / 10;
 
 pub fn read_mtime() -> u64 {
-    read_u64(CLINT + MTIME_OFFSET)
+    read_u64(MTIME)
 }
 
 pub fn read_mtimecmp() -> u64 {
-    read_u64(CLINT + MTIME_CMP_OFFSET)
+    read_u64(MTIMECMP)
 }
 
 fn read_u64(addr: usize) -> u64 {
@@ -32,8 +28,8 @@ fn read_u64(addr: usize) -> u64 {
 }
 
 pub unsafe fn write_mtimecmp(value: u64) {
-    let low: *mut u32 = (CLINT + MTIME_CMP_OFFSET) as *mut u32;
-    let high: *mut u32 = (CLINT + MTIME_CMP_OFFSET + 4) as *mut u32;
+    let low: *mut u32 = MTIMECMP as *mut u32;
+    let high: *mut u32 = (MTIMECMP + 4) as *mut u32;
 
     unsafe {
         low.write_volatile(0xFFFF_FFFF);

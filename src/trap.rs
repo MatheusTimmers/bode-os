@@ -1,15 +1,30 @@
 use core::arch::naked_asm;
 
-use crate::{clint, cpu, mem, pmp, println, scheduler, syscall, task};
+use crate::{cpu, mem, pmp, println, scheduler, syscall, task, timer};
 
 static mut BOOT_CONTEXT: [usize; 32] = [0; 32];
 
 pub fn configure_mtvec() {
-    let addr = trap_handler as *const () as usize;
+    let base = vector_table as *const () as usize;
+    debug_assert!(base.is_multiple_of(256));
     unsafe {
         cpu::write_mscratch(&raw mut BOOT_CONTEXT as usize);
-        cpu::write_mtvec(addr);
+        cpu::write_mtvec(base | cpu::MTVEC_VECTORED);
     }
+}
+
+#[unsafe(naked)]
+#[unsafe(link_section = ".text.vectors")]
+pub extern "C" fn vector_table() -> ! {
+    naked_asm!(
+        ".option push",
+        ".option norvc",
+        ".rept 32",
+            "j {h}",
+        ".endr",
+        ".option pop",
+        h = sym trap_handler,
+    );
 }
 
 /// # Safety
@@ -35,7 +50,7 @@ pub extern "C" fn handler(ctx_addr: usize) {
     let mcause = cpu::read_mcause();
     match mcause {
         cpu::MCAUSE_MACHINE_TIMER => {
-            clint::schedule_next_tick(clint::TICK);
+            timer::schedule_next_tick(timer::TICK);
             unsafe { switch_to_next_task() };
         }
         cpu::MCAUSE_ECALL_FROM_USER => unsafe {
@@ -48,7 +63,7 @@ pub extern "C" fn handler(ctx_addr: usize) {
             match request.number {
                 syscall::YIELD => {
                     syscall::set_return(current, 0);
-                    clint::start_schedule_tick(clint::TICK);
+                    timer::start_schedule_tick(timer::TICK);
                     switch_to_next_task();
                 }
                 syscall::WRITE => {
@@ -71,7 +86,7 @@ pub extern "C" fn handler(ctx_addr: usize) {
                         current, mcause, mepc, mtval
                     );
                     task::kill(current);
-                    clint::start_schedule_tick(clint::TICK);
+                    timer::start_schedule_tick(timer::TICK);
                     switch_to_next_task();
                 }
             } else {

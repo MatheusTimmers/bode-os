@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KERNEL="${1:-$ROOT/target/riscv32imac-unknown-none-elf/debug/bode_os}"
+KERNEL="${1:-$ROOT/target/riscv32imc-unknown-none-elf/debug/bode_os}"
 DURATION="${SMOKE_SECONDS:-3}"
 
 output="$(timeout "$DURATION" "$ROOT/run.sh" "$KERNEL" </dev/null 2>&1 | tr -d '\r' || true)"

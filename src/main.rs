@@ -5,13 +5,14 @@ use core::panic::PanicInfo;
 
 mod board;
 mod boot;
-mod clint;
 mod cpu;
+mod drivers;
 mod mem;
 mod pmp;
 mod scheduler;
 mod syscall;
 mod task;
+mod timer;
 mod trap;
 mod uart;
 mod user;
@@ -63,7 +64,7 @@ pub extern "C" fn kmain() -> ! {
 
     println!("Iniciando o Kernel BODE...");
 
-    clint::start_schedule_tick(clint::TICK);
+    timer::start_schedule_tick(timer::TICK);
     unsafe {
         cpu::set_mie(cpu::MIE_MTIE);
         cpu::clear_mstatus(cpu::MSTATUS_MPP_MASK);

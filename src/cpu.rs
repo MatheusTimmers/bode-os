@@ -10,6 +10,8 @@ pub const MSTATUS_MPIE: usize = 1 << 7;
 pub const MSTATUS_MPP_MASK: usize = 0b11 << 11;
 pub const MSTATUS_MPP_USER: usize = 0b00 << 11;
 
+pub const MTVEC_VECTORED: usize = 0b01;
+
 pub const MCAUSE_INTERRUPT: usize = 1 << 31;
 pub const MCAUSE_MACHINE_TIMER: usize = MCAUSE_INTERRUPT | 7;
 pub const MCAUSE_ECALL_FROM_USER: usize = 8;
