@@ -65,7 +65,7 @@ feature `ibex` escolhe a placa. O `build.rs` passa o `kernel.ld` comum e põe
 
 | | QEMU `virt` | Ibex Demo System |
 |---|---|---|
-| RAM | `0x8000_0000`, 128 MB | `0x0010_0000`, 64 KiB |
+| RAM | `0x8000_0000`, 128 MB | `0x0010_0000`, 32 KiB |
 | primeira instrução (`boot`) | `0x8000_0000` | `0x0010_0080` |
 | tabela de vetores | `0x8000_0100` | `0x0010_0000` |
 | UART | NS16550A em `0x1000_0000` | `0x8000_1000` (TX `+0x4`, status `+0x8`) |
