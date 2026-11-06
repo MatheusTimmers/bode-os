@@ -19,15 +19,27 @@ mod user;
 
 extern "C" fn task_a() -> ! {
     loop {
-        user::sys_write("A\n");
+        user::sys_write(b"A\n");
         user::sys_yield();
     }
 }
 
 extern "C" fn task_b() -> ! {
     loop {
-        user::sys_write("B\n");
+        user::sys_write(b"B\n");
         user::sys_yield();
+    }
+}
+
+extern "C" fn task_echo() -> ! {
+    loop {
+        match user::sys_read() {
+            Some(read) => {
+                let buffer = [read];
+                user::sys_write(&buffer);
+            }
+            None => user::sys_yield(),
+        };
     }
 }
 
@@ -57,6 +69,10 @@ pub extern "C" fn kmain() -> ! {
 
         if task::spawn(task_b).is_err() {
             println!("sem vaga para a task B");
+        }
+
+        if task::spawn(task_echo).is_err() {
+            println!("sem vaga para a task de eco");
         }
 
         task::spawn_idle(task_idle).expect("sem vaga para o Idle");

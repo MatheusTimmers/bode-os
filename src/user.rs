@@ -12,15 +12,30 @@ pub fn sys_yield() {
     }
 }
 
-pub fn sys_write(s: &str) -> isize {
+pub fn sys_write(bytes: &[u8]) -> isize {
     let ret: usize;
     unsafe {
         asm!(
             "ecall",
             in("a7") syscall::WRITE,
-            inlateout("a0") s.as_ptr() as usize => ret,
-            in("a1") s.len(),
+            inlateout("a0") bytes.as_ptr() as usize => ret,
+            in("a1") bytes.len(),
         );
     }
     ret as isize
+}
+
+pub fn sys_read() -> Option<u8> {
+    let ret: usize;
+    unsafe {
+        asm!(
+            "ecall",
+            in("a7") syscall::READ,
+            lateout("a0") ret,
+        );
+    }
+    if ret == syscall::ERROR {
+        return None;
+    }
+    Some(ret as u8)
 }

@@ -4,6 +4,7 @@ use crate::{mem, task, uart};
 
 pub const YIELD: usize = 0;
 pub const WRITE: usize = 1;
+pub const READ: usize = 2;
 
 pub const ERROR: usize = usize::MAX;
 
@@ -47,6 +48,13 @@ pub fn write(index: usize, ptr: usize, len: usize) -> usize {
             uart::write_bytes(bytes);
             len
         }
+        None => ERROR,
+    }
+}
+
+pub fn read() -> usize {
+    match uart::read_byte() {
+        Some(byte) => byte as usize,
         None => ERROR,
     }
 }

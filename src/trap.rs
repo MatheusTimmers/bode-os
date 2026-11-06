@@ -70,6 +70,10 @@ pub extern "C" fn handler(ctx_addr: usize) {
                     let written = syscall::write(current, request.args[0], request.args[1]);
                     syscall::set_return(current, written);
                 }
+                syscall::READ => {
+                    let byte = syscall::read();
+                    syscall::set_return(current, byte);
+                }
                 _ => syscall::set_return(current, syscall::ERROR),
             }
         },

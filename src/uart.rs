@@ -17,6 +17,10 @@ pub fn write_bytes(s: &[u8]) {
     }
 }
 
+pub fn read_byte() -> Option<u8> {
+    uart_chip::read_byte(UART)
+}
+
 pub fn _print(args: fmt::Arguments) {
     let mut uart = Uart;
     let _ = uart.write_fmt(args);
