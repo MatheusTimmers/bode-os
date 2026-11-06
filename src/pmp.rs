@@ -9,24 +9,39 @@ pub const OFF: usize = 0b00 << 3;
 pub const TOR: usize = 0b01 << 3;
 pub const NAPOT: usize = 0b11 << 3;
 
+const START_RULE: usize = 0;
+const TEXT_RULE: usize = 1;
+const RODATA_RULE: usize = 2;
 const STACK_RULE: usize = 3;
-const KERNEL_CONFIG: usize = OFF | (TOR | READ | EXECUTE) << 8 | (TOR | READ) << 16;
+
+const KERNEL_CONFIG: usize = rule_config(START_RULE, OFF)
+    | rule_config(TEXT_RULE, TOR | READ | EXECUTE)
+    | rule_config(RODATA_RULE, TOR | READ);
 
 pub fn protect_kernel() {
-    let addrs = [mem::text_start(), mem::text_end(), mem::rodata_end()];
-
-    for (index, addr) in addrs.into_iter().enumerate() {
-        unsafe { cpu::write_pmpaddr(index, addr >> 2) };
+    unsafe {
+        cpu::write_pmpaddr(START_RULE, to_pmpaddr(mem::text_start()));
+        cpu::write_pmpaddr(TEXT_RULE, to_pmpaddr(mem::text_end()));
+        cpu::write_pmpaddr(RODATA_RULE, to_pmpaddr(mem::rodata_end()));
+        cpu::write_pmpcfg0(KERNEL_CONFIG);
     }
-
-    unsafe { cpu::write_pmpcfg0(KERNEL_CONFIG) };
 }
 
 pub fn allow_stack(stack: Range<usize>) {
+    let config = rule_config(STACK_RULE, NAPOT | READ | WRITE);
     unsafe {
         cpu::write_pmpaddr(STACK_RULE, napot_addr(stack));
-        cpu::write_pmpcfg0(KERNEL_CONFIG | (NAPOT | READ | WRITE) << (STACK_RULE * 8));
+        cpu::write_pmpcfg0(KERNEL_CONFIG | config);
     }
+}
+
+const fn rule_config(rule: usize, config: usize) -> usize {
+    let shift = rule * 8;
+    config << shift
+}
+
+fn to_pmpaddr(addr: usize) -> usize {
+    addr >> 2
 }
 
 fn napot_addr(region: Range<usize>) -> usize {
@@ -36,5 +51,6 @@ fn napot_addr(region: Range<usize>) -> usize {
     debug_assert!(size.is_power_of_two());
     debug_assert!(region.start.is_multiple_of(size));
 
-    (region.start >> 2) | ((size >> 3) - 1)
+    let mask = (size >> 3) - 1;
+    to_pmpaddr(region.start) | mask
 }

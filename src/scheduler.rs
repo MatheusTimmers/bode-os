@@ -24,12 +24,9 @@ pub unsafe fn set_idle(index: usize) {
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn start() -> usize {
     let scheduler = unsafe { scheduler_mut() };
-
-    let index = scheduler
+    scheduler
         .pop_next()
-        .expect("nenhuma task foi criada antes do start");
-
-    unsafe { task::context_addr(index) }
+        .expect("nenhuma task foi criada antes do start")
 }
 
 /// # Safety
@@ -38,12 +35,13 @@ pub unsafe fn schedule() -> Result<usize, Error> {
     let scheduler = unsafe { scheduler_mut() };
 
     let current = scheduler.current;
-    if scheduler.idle != Some(current) && unsafe { task::is_ready(current) } {
+    let is_idle = scheduler.idle == Some(current);
+    let ready = unsafe { task::is_ready(current) };
+    if !is_idle && ready {
         scheduler.enqueue(current);
     }
 
-    let index = scheduler.pop_next()?;
-    Ok(unsafe { task::context_addr(index) })
+    scheduler.pop_next()
 }
 
 /// # Safety
@@ -91,12 +89,22 @@ impl Scheduler {
     }
 
     fn pop_next(&mut self) -> Result<usize, Error> {
-        let index = self
-            .ready
-            .pop()
-            .or_else(|| self.idle.filter(|&idle| unsafe { task::is_ready(idle) }))
-            .ok_or(Error::NoReadyTask)?;
-        self.current = index;
-        Ok(index)
+        let next = match self.ready.pop() {
+            Some(index) => index,
+            None => self.ready_idle()?,
+        };
+        self.current = next;
+        Ok(next)
+    }
+
+    fn ready_idle(&self) -> Result<usize, Error> {
+        let Some(idle) = self.idle else {
+            return Err(Error::NoReadyTask);
+        };
+        let ready = unsafe { task::is_ready(idle) };
+        if !ready {
+            return Err(Error::NoReadyTask);
+        }
+        Ok(idle)
     }
 }

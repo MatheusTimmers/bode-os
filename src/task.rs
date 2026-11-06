@@ -110,7 +110,12 @@ impl TaskTable {
     }
 
     fn find_free_slot(&self) -> Option<usize> {
-        (0..MAX_TASKS).find(|&i| self.slots[i].state == State::Free)
+        for (index, slot) in self.slots.iter().enumerate() {
+            if slot.state == State::Free {
+                return Some(index);
+            }
+        }
+        None
     }
 
     fn spawn(&mut self, entry: extern "C" fn() -> !) -> Result<usize, Error> {

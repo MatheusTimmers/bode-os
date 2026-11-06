@@ -72,8 +72,8 @@ pub extern "C" fn kmain() -> ! {
     }
 
     unsafe {
-        let context = scheduler::start();
-        pmp::allow_stack(task::stack_range(scheduler::current()));
-        cpu::restore_context(context)
+        let first = scheduler::start();
+        pmp::allow_stack(task::stack_range(first));
+        cpu::restore_context(task::context_addr(first))
     }
 }

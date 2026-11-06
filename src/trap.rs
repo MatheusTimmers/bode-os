@@ -31,9 +31,9 @@ pub extern "C" fn vector_table() -> ! {
 /// Chamar só com as interrupções desligadas, de dentro do handler de trap.
 unsafe fn switch_to_next_task() {
     match unsafe { scheduler::schedule() } {
-        Ok(addr) => unsafe {
-            pmp::allow_stack(task::stack_range(scheduler::current()));
-            cpu::write_mscratch(addr)
+        Ok(next) => unsafe {
+            pmp::allow_stack(task::stack_range(next));
+            cpu::write_mscratch(task::context_addr(next));
         },
         Err(scheduler::Error::NoReadyTask) => {
             panic!("Nenhuma task pronta: deveria vir o idle")
@@ -76,7 +76,9 @@ pub extern "C" fn handler(ctx_addr: usize) {
         _ => {
             let mepc = cpu::read_mepc();
             let mtval = cpu::read_mtval();
-            let from_user = cpu::read_mstatus() & cpu::MSTATUS_MPP_MASK == cpu::MSTATUS_MPP_USER;
+            let mstatus = cpu::read_mstatus();
+            let mpp = mstatus & cpu::MSTATUS_MPP_MASK;
+            let from_user = mpp == cpu::MSTATUS_MPP_USER;
 
             if from_user {
                 unsafe {
