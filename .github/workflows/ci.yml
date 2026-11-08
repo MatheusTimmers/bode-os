@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
@@ -20,6 +20,17 @@ jobs:
       - name: Clippy
         run: cargo clippy -- -D warnings
 
+      - name: Clippy com testes e medicao
+        run: |
+          cargo clippy --features hw-test -- -D warnings
+          cargo clippy --features bench -- -D warnings
+
+      - name: Clippy do Ibex
+        run: |
+          cargo clippy --release --features ibex -- -D warnings
+          cargo clippy --release --features ibex,hw-test -- -D warnings
+          cargo clippy --release --features ibex,bench -- -D warnings
+
       - name: Build
         run: cargo build
 
@@ -27,7 +38,7 @@ jobs:
         run: cargo test-host
 
       - name: Instala o QEMU
-        run: sudo apt-get update && sudo apt-get install -y qemu-system-misc
+        run: sudo apt-get update && sudo apt-get install -y qemu-system-riscv
 
       - name: Smoke test no QEMU
         run: scripts/smoke.sh
