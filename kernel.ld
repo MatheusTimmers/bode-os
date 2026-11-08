@@ -38,10 +38,15 @@ SECTIONS {
     . += 4 * 1024;
     __stack_top = .;
 
+    . = ALIGN(2K);
+    __heap_start = .;
+    __heap_end = MIN(RAM_START + RAM_SIZE, __heap_start + 16K);
+
     /DISCARD/ : {
         *(.eh_frame .eh_frame_hdr)
     }
 }
 
 ASSERT(__stack_top <= RAM_START + RAM_SIZE, "o kernel nao cabe na RAM")
+ASSERT(__heap_end - __heap_start >= 8K, "heap menor que 8 KiB")
 ASSERT(boot == RAM_START + BOOT_OFFSET, "boot no local errado")

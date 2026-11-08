@@ -1,6 +1,9 @@
 use core::arch::naked_asm;
 
-use crate::{cpu, mem, pmp, println, scheduler, syscall, task, timer};
+use crate::arch::{cpu, pmp};
+use crate::kernel::{scheduler, syscall, task, timer};
+use crate::memory::mem;
+use crate::println;
 
 static mut BOOT_CONTEXT: [usize; 32] = [0; 32];
 
@@ -151,6 +154,6 @@ pub extern "C" fn trap_handler() -> ! {
         // 8. Restaura o contexto
         "j {r}",
         h = sym handler,
-        r = sym crate::cpu::restore_context
+        r = sym crate::arch::cpu::restore_context
     );
 }

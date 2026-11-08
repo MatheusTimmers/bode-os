@@ -1,6 +1,6 @@
 use core::arch::asm;
 
-use crate::syscall;
+use crate::kernel::syscall;
 
 pub fn sys_yield() {
     unsafe {

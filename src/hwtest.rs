@@ -1,6 +1,9 @@
 use core::ops::Range;
 
-use crate::{board, heap, interpreter, mem, task, user};
+use crate::kernel::task;
+use crate::memory::{heap, mem};
+use crate::program::interpreter;
+use crate::{board, user};
 
 const BLOCK_SIZE: usize = 512;
 const VICTIM_SECRET: u32 = 0xCAFE_F00D;

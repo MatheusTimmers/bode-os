@@ -1,4 +1,8 @@
-use crate::{flash, heap, interpreter, println, task};
+use crate::drivers::flash;
+use crate::kernel::task;
+use crate::memory::heap;
+use crate::println;
+use crate::program::interpreter;
 
 const PROGRAMS_OFFSET: usize = 0x40_0000;
 const MAGIC: u32 = u32::from_le_bytes(*b"BODE");

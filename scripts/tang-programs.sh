@@ -12,7 +12,7 @@ fi
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
-python3 "$ROOT/tools/t1asm.py" "$@" -o "$work/programs.bin"
+python3 "$ROOT/tools/pseudoasm.py" "$@" -o "$work/programs.bin"
 size="$(stat -c %s "$work/programs.bin")"
 
 echo "Gravando $size bytes na flash da placa, no offset $OFFSET..."

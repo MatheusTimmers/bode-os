@@ -1,6 +1,7 @@
 use core::ops::Range;
 
-use crate::{cpu, mem};
+use crate::arch::cpu;
+use crate::memory::mem;
 
 pub const READ: usize = 1 << 0;
 pub const WRITE: usize = 1 << 1;

@@ -1,6 +1,7 @@
 use core::ops::Range;
 
-use crate::{heap, scheduler};
+use crate::kernel::scheduler;
+use crate::memory::heap;
 
 pub const MAX_TASKS: usize = 10;
 const STACK_SIZE: usize = 1024;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SIM="${IBEX_SIM:-$ROOT/../ibex-demo-system/build/lowrisc_ibex_demo_system_0/sim-verilator/Vtop_verilator}"
 KERNEL="$1"
 

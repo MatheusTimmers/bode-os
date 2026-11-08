@@ -1,8 +1,10 @@
 use core::ops::Range;
 
+use crate::drivers::uart;
+use crate::kernel::task;
 #[cfg(feature = "hw-test")]
-use crate::heap;
-use crate::{mem, task, uart};
+use crate::memory::heap;
+use crate::memory::mem;
 
 pub const YIELD: usize = 0;
 pub const WRITE: usize = 1;

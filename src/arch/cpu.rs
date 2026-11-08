@@ -53,6 +53,14 @@ pub unsafe extern "C" fn restore_context(addr: usize) -> ! {
     )
 }
 
+#[cfg(feature = "bench")]
+#[inline]
+pub fn read_mcycle() -> u32 {
+    let value: u32;
+    unsafe { asm!("csrr {}, mcycle", out(reg) value, options(nomem, nostack)) };
+    value
+}
+
 #[inline]
 pub fn read_mcause() -> usize {
     let value: usize;

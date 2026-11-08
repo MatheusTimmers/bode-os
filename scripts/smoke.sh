@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 KERNEL="${1:-$ROOT/target/riscv32imc-unknown-none-elf/debug/bode_os}"
 DURATION="${SMOKE_SECONDS:-3}"
 
-output="$(timeout "$DURATION" "$ROOT/run.sh" "$KERNEL" </dev/null 2>&1 | tr -d '\r' || true)"
+output="$(BODE_FLASH=none timeout "$DURATION" "$ROOT/scripts/run.sh" "$KERNEL" </dev/null 2>&1 | tr -d '\r' || true)"
 echo "$output"
 echo "----"
 
@@ -19,8 +19,8 @@ done
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-python3 "$ROOT/tools/t1asm.py" "$ROOT/programs/prog1.txt" "$ROOT/programs/contagem.txt" -o "$work/programs.bin" >/dev/null
-flash_output="$(BODE_FLASH="$work/programs.bin" timeout "$DURATION" "$ROOT/run.sh" "$KERNEL" </dev/null 2>&1 | tr -d '\r' || true)"
+python3 "$ROOT/tools/pseudoasm.py" "$ROOT/programs/prog1.txt" "$ROOT/programs/contagem.txt" -o "$work/programs.bin" >/dev/null
+flash_output="$(BODE_FLASH="$work/programs.bin" timeout "$DURATION" "$ROOT/scripts/run.sh" "$KERNEL" </dev/null 2>&1 | tr -d '\r' || true)"
 echo "$flash_output"
 echo "----"
 

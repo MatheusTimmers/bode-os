@@ -3,24 +3,22 @@
 
 use core::panic::PanicInfo;
 
+use arch::{cpu, pmp, trap};
+use kernel::{scheduler, task, timer};
+use memory::{heap, mem};
+use program::loader;
+
+mod arch;
+#[cfg(feature = "bench")]
+mod bench;
 mod board;
 mod boot;
-mod cpu;
 mod drivers;
-mod flash;
-mod heap;
 #[cfg(feature = "hw-test")]
 mod hwtest;
-mod interpreter;
-mod loader;
-mod mem;
-mod pmp;
-mod scheduler;
-mod syscall;
-mod task;
-mod timer;
-mod trap;
-mod uart;
+mod kernel;
+mod memory;
+mod program;
 mod user;
 
 extern "C" fn task_idle() -> ! {
@@ -35,6 +33,7 @@ fn panic(info: &PanicInfo<'_>) -> ! {
     cpu::halt();
 }
 
+#[cfg_attr(feature = "bench", allow(unreachable_code))]
 #[unsafe(no_mangle)]
 pub extern "C" fn kmain() -> ! {
     unsafe {
@@ -42,6 +41,9 @@ pub extern "C" fn kmain() -> ! {
         mem::plant_stack_canary();
         trap::configure_mtvec();
         pmp::protect_kernel();
+        #[cfg(feature = "bench")]
+        bench::run();
+
         heap::init();
         task::spawn_idle(task_idle).expect("sem vaga para o Idle");
         #[cfg(feature = "hw-test")]

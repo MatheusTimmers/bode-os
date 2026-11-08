@@ -1,4 +1,4 @@
-use crate::task::{self, MAX_TASKS};
+use crate::kernel::task::{self, MAX_TASKS};
 use bode_os::collections::queue::Queue;
 
 #[derive(Debug)]

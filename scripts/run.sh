@@ -29,13 +29,19 @@ if (( ${#GDB[@]} )); then
     echo
 fi
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
 FLASH=()
-if [[ -n "${BODE_FLASH:-}" ]]; then
-    pflash="$(mktemp)"
-    trap 'rm -f "$pflash"' EXIT
-    truncate -s 32M "$pflash"
-    dd if="$BODE_FLASH" of="$pflash" bs=4096 seek=$((0x400000)) oflag=seek_bytes conv=notrunc status=none
-    FLASH=(-drive "if=pflash,unit=1,format=raw,file=$pflash")
+if [[ "${BODE_FLASH:-}" != none ]]; then
+    work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
+    image="${BODE_FLASH:-$work/programs.bin}"
+    if [[ -z "${BODE_FLASH:-}" ]]; then
+        python3 "$ROOT/tools/pseudoasm.py" "$ROOT/programs/prog1.txt" "$ROOT/programs/contagem.txt" -o "$image" >/dev/null
+    fi
+    truncate -s 32M "$work/pflash"
+    dd if="$image" of="$work/pflash" bs=4096 seek=$((0x400000)) oflag=seek_bytes conv=notrunc status=none
+    FLASH=(-drive "if=pflash,unit=1,format=raw,file=$work/pflash")
 fi
 
 qemu-system-riscv32 \

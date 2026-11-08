@@ -5,20 +5,27 @@ use core::ptr::NonNull;
 use bode_os::allocators::Allocator;
 use bode_os::allocators::buddy::Buddy;
 
-const HEAP_SIZE: usize = 8 * 1024;
+use crate::memory::mem;
 
-#[repr(C, align(2048))]
-struct Arena([u8; HEAP_SIZE]);
-
-static mut ARENA: Arena = Arena([0; HEAP_SIZE]);
 static mut HEAP: Option<Buddy> = None;
+
+#[cfg(feature = "bench")]
+const BENCH_ARENA_SIZE: usize = 8 * 1024;
+
+/// # Safety
+/// Chamar só antes de `init`, e sem usar a arena devolvida por uma chamada anterior.
+#[cfg(feature = "bench")]
+pub unsafe fn fresh_arena() -> &'static mut [u8] {
+    let arena = unsafe { arena() };
+    let arena = &mut arena[..BENCH_ARENA_SIZE];
+    arena.fill(0);
+    arena
+}
 
 /// # Safety
 /// Chamar uma vez no boot, depois de `initialize_bss`.
-#[allow(clippy::deref_addrof)]
 pub unsafe fn init() {
-    let arena = unsafe { &mut *(&raw mut ARENA) };
-    unsafe { *heap_mut() = Some(Buddy::new(&mut arena.0)) };
+    unsafe { *heap_mut() = Some(Buddy::new(arena())) };
 }
 
 /// # Safety
@@ -44,6 +51,12 @@ pub unsafe fn free_region(region: Range<usize>) {
         return;
     };
     unsafe { heap.dealloc(start, layout) };
+}
+
+unsafe fn arena() -> &'static mut [u8] {
+    let range = mem::heap_range();
+    let size = range.end - range.start;
+    unsafe { core::slice::from_raw_parts_mut(range.start as *mut u8, size) }
 }
 
 /// # Safety

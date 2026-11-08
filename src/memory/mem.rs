@@ -7,6 +7,8 @@ unsafe extern "C" {
     static __text_end: u8;
     static __rodata_end: u8;
     static mut __kernel_stack_bottom: usize;
+    static __heap_start: u8;
+    static __heap_end: u8;
 }
 
 const STACK_CANARY: usize = 0x5AFE_C0DE;
@@ -33,6 +35,12 @@ pub fn text_end() -> usize {
 
 pub fn rodata_end() -> usize {
     (&raw const __rodata_end).addr()
+}
+
+pub fn heap_range() -> Range<usize> {
+    let start = (&raw const __heap_start).addr();
+    let end = (&raw const __heap_end).addr();
+    start..end
 }
 
 pub fn user_shared() -> Range<usize> {

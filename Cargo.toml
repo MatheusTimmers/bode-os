@@ -7,4 +7,5 @@ edition = "2024"
 
 [features]
 hw-test = []
+bench = []
 ibex = []
