@@ -156,7 +156,7 @@ fn print_labeled(id: usize, label: &[u8], value: i32) {
     user::sys_write(b"\n");
 }
 
-fn format_int(value: i32, buffer: &mut [u8; 12]) -> &[u8] {
+pub fn format_int(value: i32, buffer: &mut [u8; 12]) -> &[u8] {
     let negative = value < 0;
     let mut remaining = value.unsigned_abs();
     let mut position = buffer.len();

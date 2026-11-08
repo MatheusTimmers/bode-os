@@ -74,6 +74,11 @@ pub extern "C" fn handler(ctx_addr: usize) {
                     let byte = syscall::read();
                     syscall::set_return(current, byte);
                 }
+                #[cfg(feature = "hw-test")]
+                syscall::SPAWN => {
+                    let index = syscall::spawn(request.args[0], request.args[1]);
+                    syscall::set_return(current, index);
+                }
                 syscall::EXIT => {
                     task::kill(current);
                     timer::start_schedule_tick(timer::TICK);

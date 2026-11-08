@@ -1,11 +1,15 @@
 use core::ops::Range;
 
+#[cfg(feature = "hw-test")]
+use crate::heap;
 use crate::{mem, task, uart};
 
 pub const YIELD: usize = 0;
 pub const WRITE: usize = 1;
 pub const READ: usize = 2;
 pub const EXIT: usize = 3;
+#[cfg(feature = "hw-test")]
+pub const SPAWN: usize = 4;
 
 pub const ERROR: usize = usize::MAX;
 
@@ -57,6 +61,25 @@ pub fn read() -> usize {
     match uart::read_byte() {
         Some(byte) => byte as usize,
         None => ERROR,
+    }
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas.
+#[cfg(feature = "hw-test")]
+pub unsafe fn spawn(entry: usize, size: usize) -> usize {
+    let Some(region) = (unsafe { heap::alloc_region(size) }) else {
+        return ERROR;
+    };
+    let args = [region.start, size];
+    let entry: extern "C" fn(usize, usize) -> ! = unsafe { core::mem::transmute(entry) };
+
+    match unsafe { task::spawn_process(entry, region.clone(), args) } {
+        Ok(index) => index,
+        Err(_) => {
+            unsafe { heap::free_region(region) };
+            ERROR
+        }
     }
 }
 

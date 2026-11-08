@@ -45,3 +45,20 @@ pub fn sys_exit() -> ! {
         asm!("ecall", in("a7") syscall::EXIT, options(noreturn));
     }
 }
+
+#[cfg(feature = "hw-test")]
+pub fn sys_spawn(entry: extern "C" fn(usize, usize) -> !, size: usize) -> Option<usize> {
+    let ret: usize;
+    unsafe {
+        asm!(
+            "ecall",
+            in("a7") syscall::SPAWN,
+            inlateout("a0") entry as usize => ret,
+            in("a1") size,
+        );
+    }
+    if ret == syscall::ERROR {
+        return None;
+    }
+    Some(ret)
+}

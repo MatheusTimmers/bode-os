@@ -9,6 +9,8 @@ mod cpu;
 mod drivers;
 mod flash;
 mod heap;
+#[cfg(feature = "hw-test")]
+mod hwtest;
 mod interpreter;
 mod loader;
 mod mem;
@@ -42,6 +44,9 @@ pub extern "C" fn kmain() -> ! {
         pmp::protect_kernel();
         heap::init();
         task::spawn_idle(task_idle).expect("sem vaga para o Idle");
+        #[cfg(feature = "hw-test")]
+        hwtest::spawn_all();
+
         loader::load_programs();
     };
 
