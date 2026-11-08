@@ -12,7 +12,7 @@ pub const NAPOT: usize = 0b11 << 3;
 const START_RULE: usize = 0;
 const TEXT_RULE: usize = 1;
 const RODATA_RULE: usize = 2;
-const STACK_RULE: usize = 3;
+const TASK_RULE: usize = 3;
 
 const KERNEL_CONFIG: usize = rule_config(START_RULE, OFF)
     | rule_config(TEXT_RULE, TOR | READ | EXECUTE)
@@ -27,10 +27,10 @@ pub fn protect_kernel() {
     }
 }
 
-pub fn allow_stack(stack: Range<usize>) {
-    let config = rule_config(STACK_RULE, NAPOT | READ | WRITE);
+pub fn allow_region(region: Range<usize>) {
+    let config = rule_config(TASK_RULE, NAPOT | READ | WRITE);
     unsafe {
-        cpu::write_pmpaddr(STACK_RULE, napot_addr(stack));
+        cpu::write_pmpaddr(TASK_RULE, napot_addr(region));
         cpu::write_pmpcfg0(KERNEL_CONFIG | config);
     }
 }

@@ -1,6 +1,6 @@
 use core::ops::Range;
 
-use crate::scheduler;
+use crate::{heap, scheduler};
 
 pub const MAX_TASKS: usize = 10;
 const STACK_SIZE: usize = 1024;
@@ -15,28 +15,44 @@ pub const A7: usize = 17;
 #[derive(Debug)]
 pub enum Error {
     NoFreeSlot,
+    NoMemory,
 }
 
 /// # Safety
-/// Chamar só com as interrupções desligadas.
-pub unsafe fn spawn(entry: extern "C" fn() -> !) -> Result<usize, Error> {
+/// Chamar só com as interrupções desligadas, depois de `heap::init`.
+pub unsafe fn spawn_idle(entry: extern "C" fn() -> !) -> Result<usize, Error> {
+    let index = unsafe { spawn_with_stack(entry)? };
+    unsafe { scheduler::set_idle(index) };
+    Ok(index)
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas, com uma região que veio de `heap::alloc_region`.
+/// Se der erro, a região continua com quem chamou.
+pub unsafe fn spawn_process(
+    entry: extern "C" fn(usize, usize) -> !,
+    region: Range<usize>,
+    args: [usize; 2],
+) -> Result<usize, Error> {
     let table = unsafe { table_mut() };
 
-    let index = table.spawn(entry)?;
+    let index = table.spawn_in(entry as usize, region)?;
+    table.slots[index].context.regs[A0] = args[0];
+    table.slots[index].context.regs[A1] = args[1];
     unsafe { scheduler::enqueue(index) };
 
     Ok(index)
 }
 
-/// # Safety
-/// Chamar só com as interrupções desligadas.
-pub unsafe fn spawn_idle(entry: extern "C" fn() -> !) -> Result<usize, Error> {
+unsafe fn spawn_with_stack(entry: extern "C" fn() -> !) -> Result<usize, Error> {
+    let region = unsafe { heap::alloc_region(STACK_SIZE) }.ok_or(Error::NoMemory)?;
     let table = unsafe { table_mut() };
 
-    let index = table.spawn(entry)?;
-    unsafe { scheduler::set_idle(index) };
-
-    Ok(index)
+    let result = table.spawn_in(entry as usize, region.clone());
+    if result.is_err() {
+        unsafe { heap::free_region(region) };
+    }
+    result
 }
 
 /// # Safety
@@ -64,7 +80,18 @@ pub unsafe fn is_ready(index: usize) -> bool {
 /// Chamar só com as interrupções desligadas.
 pub unsafe fn kill(index: usize) {
     let table = unsafe { table_mut() };
-    table.slots[index].state = State::Free;
+    let task = &mut table.slots[index];
+
+    task.state = State::Free;
+    unsafe { heap::free_region(task.region.clone()) };
+    task.region = 0..0;
+}
+
+/// # Safety
+/// Chamar só com as interrupções desligadas.
+pub unsafe fn region(index: usize) -> Range<usize> {
+    let table = unsafe { table() };
+    table.slots[index].region.clone()
 }
 
 /// # Safety
@@ -75,14 +102,6 @@ pub unsafe fn context_addr(index: usize) -> usize {
 }
 
 static mut TASK_TABLE: TaskTable = TaskTable::new();
-
-#[unsafe(link_section = ".user_stacks")]
-static mut USER_STACKS: [Stack; MAX_TASKS] = [const { Stack::new() }; MAX_TASKS];
-
-pub fn stack_range(index: usize) -> Range<usize> {
-    let base = unsafe { &raw const USER_STACKS[index] }.addr();
-    base..base + core::mem::size_of::<Stack>()
-}
 
 /// # Safety
 /// Chamar só com as interrupções desligadas, sem guardar a referência além da função que chamou.
@@ -118,13 +137,15 @@ impl TaskTable {
         None
     }
 
-    fn spawn(&mut self, entry: extern "C" fn() -> !) -> Result<usize, Error> {
+    fn spawn_in(&mut self, entry: usize, region: Range<usize>) -> Result<usize, Error> {
         let index = self.find_free_slot().ok_or(Error::NoFreeSlot)?;
+        let task = &mut self.slots[index];
 
-        self.slots[index].context = Context::zero();
-        self.slots[index].context.regs[MEPC] = entry as usize;
-        self.slots[index].context.regs[SP] = stack_range(index).end;
-        self.slots[index].state = State::Ready;
+        task.context = Context::zero();
+        task.context.regs[MEPC] = entry;
+        task.context.regs[SP] = region.end;
+        task.region = region;
+        task.state = State::Ready;
 
         Ok(index)
     }
@@ -143,6 +164,7 @@ enum State {
 struct Task {
     context: Context,
     state: State,
+    region: Range<usize>,
 }
 
 impl Task {
@@ -150,6 +172,7 @@ impl Task {
         Self {
             context: Context::zero(),
             state: State::Free,
+            region: 0..0,
         }
     }
 }
@@ -164,15 +187,3 @@ impl Context {
         Self { regs: [0; 32] }
     }
 }
-
-#[repr(align(1024))]
-#[allow(dead_code)]
-struct Stack([u8; STACK_SIZE]);
-
-impl Stack {
-    const fn new() -> Self {
-        Self([0; STACK_SIZE])
-    }
-}
-
-const _: () = assert!(STACK_SIZE.is_power_of_two() && core::mem::align_of::<Stack>() == STACK_SIZE);

@@ -7,6 +7,10 @@ mod board;
 mod boot;
 mod cpu;
 mod drivers;
+mod flash;
+mod heap;
+mod interpreter;
+mod loader;
 mod mem;
 mod pmp;
 mod scheduler;
@@ -16,32 +20,6 @@ mod timer;
 mod trap;
 mod uart;
 mod user;
-
-extern "C" fn task_a() -> ! {
-    loop {
-        user::sys_write(b"A\n");
-        user::sys_yield();
-    }
-}
-
-extern "C" fn task_b() -> ! {
-    loop {
-        user::sys_write(b"B\n");
-        user::sys_yield();
-    }
-}
-
-extern "C" fn task_echo() -> ! {
-    loop {
-        match user::sys_read() {
-            Some(read) => {
-                let buffer = [read];
-                user::sys_write(&buffer);
-            }
-            None => user::sys_yield(),
-        };
-    }
-}
 
 extern "C" fn task_idle() -> ! {
     loop {
@@ -62,20 +40,9 @@ pub extern "C" fn kmain() -> ! {
         mem::plant_stack_canary();
         trap::configure_mtvec();
         pmp::protect_kernel();
-
-        if task::spawn(task_a).is_err() {
-            println!("sem vaga para a task A");
-        }
-
-        if task::spawn(task_b).is_err() {
-            println!("sem vaga para a task B");
-        }
-
-        if task::spawn(task_echo).is_err() {
-            println!("sem vaga para a task de eco");
-        }
-
+        heap::init();
         task::spawn_idle(task_idle).expect("sem vaga para o Idle");
+        loader::load_programs();
     };
 
     println!("Iniciando o Kernel BODE...");
@@ -89,7 +56,7 @@ pub extern "C" fn kmain() -> ! {
 
     unsafe {
         let first = scheduler::start();
-        pmp::allow_stack(task::stack_range(first));
+        pmp::allow_region(task::region(first));
         cpu::restore_context(task::context_addr(first))
     }
 }

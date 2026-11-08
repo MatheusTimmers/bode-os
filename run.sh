@@ -6,6 +6,8 @@
 #   cargo run           roda normal
 #   cargo run -- -g     congela no reset e espera o GDB na porta 1234
 #
+#   BODE_FLASH=programas.bin cargo run    põe a imagem na flash, no offset dos programas
+#
 # Sair do QEMU:  Ctrl+A , solta , X
 #
 set -euo pipefail
@@ -27,10 +29,20 @@ if (( ${#GDB[@]} )); then
     echo
 fi
 
+FLASH=()
+if [[ -n "${BODE_FLASH:-}" ]]; then
+    pflash="$(mktemp)"
+    trap 'rm -f "$pflash"' EXIT
+    truncate -s 32M "$pflash"
+    dd if="$BODE_FLASH" of="$pflash" bs=4096 seek=$((0x400000)) oflag=seek_bytes conv=notrunc status=none
+    FLASH=(-drive "if=pflash,unit=1,format=raw,file=$pflash")
+fi
+
 qemu-system-riscv32 \
     -machine virt \
     -bios none \
     -m 128M \
     -nographic \
     "${GDB[@]}" \
+    "${FLASH[@]}" \
     -kernel "$KERNEL"

@@ -39,3 +39,9 @@ pub fn sys_read() -> Option<u8> {
     }
     Some(ret as u8)
 }
+
+pub fn sys_exit() -> ! {
+    unsafe {
+        asm!("ecall", in("a7") syscall::EXIT, options(noreturn));
+    }
+}

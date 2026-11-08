@@ -23,10 +23,6 @@ SECTIONS {
     . = ALIGN(4);
     __rodata_end = .;
 
-    .user_stacks (NOLOAD) : ALIGN(16) {
-        KEEP(*(.user_stacks));
-    }
-
     .data : ALIGN(4) {
         *(.data .data.* .sdata .sdata.*);
     }

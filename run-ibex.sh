@@ -14,4 +14,10 @@ fi
 
 "$ROOT/scripts/vmem.sh" "$KERNEL" "$KERNEL.vmem" >/dev/null
 
-exec "$SIM" --meminit=ram,"$KERNEL.vmem" +UARTDPI_LOG_uart0=-
+FLASH=()
+if [[ -n "${BODE_FLASH:-}" ]]; then
+    xxd -p -c 1 "$BODE_FLASH" > "$KERNEL.flash.hex"
+    FLASH=(+flash="$KERNEL.flash.hex")
+fi
+
+exec "$SIM" --meminit=ram,"$KERNEL.vmem" +UARTDPI_LOG_uart0=- "${FLASH[@]}"

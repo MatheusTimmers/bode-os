@@ -32,7 +32,7 @@ pub extern "C" fn vector_table() -> ! {
 unsafe fn switch_to_next_task() {
     match unsafe { scheduler::schedule() } {
         Ok(next) => unsafe {
-            pmp::allow_stack(task::stack_range(next));
+            pmp::allow_region(task::region(next));
             cpu::write_mscratch(task::context_addr(next));
         },
         Err(scheduler::Error::NoReadyTask) => {
@@ -73,6 +73,11 @@ pub extern "C" fn handler(ctx_addr: usize) {
                 syscall::READ => {
                     let byte = syscall::read();
                     syscall::set_return(current, byte);
+                }
+                syscall::EXIT => {
+                    task::kill(current);
+                    timer::start_schedule_tick(timer::TICK);
+                    switch_to_next_task();
                 }
                 _ => syscall::set_return(current, syscall::ERROR),
             }

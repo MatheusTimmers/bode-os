@@ -5,6 +5,7 @@ use crate::{mem, task, uart};
 pub const YIELD: usize = 0;
 pub const WRITE: usize = 1;
 pub const READ: usize = 2;
+pub const EXIT: usize = 3;
 
 pub const ERROR: usize = usize::MAX;
 
@@ -63,9 +64,10 @@ fn user_buffer(index: usize, ptr: usize, len: usize) -> Option<&'static [u8]> {
     if len == 0 {
         return Some(&[]);
     }
+
     let end = ptr.checked_add(len)?;
     let inside = |region: Range<usize>| region.start <= ptr && end <= region.end;
-    if !inside(mem::user_shared()) && !inside(task::stack_range(index)) {
+    if !inside(mem::user_shared()) && !inside(unsafe { task::region(index) }) {
         return None;
     }
     Some(unsafe { core::slice::from_raw_parts(ptr as *const u8, len) })
