@@ -46,9 +46,7 @@ unsafe fn switch_to_next_task() {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn handler(ctx_addr: usize) {
-    if !mem::stack_canary_intact() {
-        panic!("pilha do kernel estourou");
-    }
+    check_stack_canary();
 
     let mcause = cpu::read_mcause();
     match mcause {
@@ -116,6 +114,14 @@ pub extern "C" fn handler(ctx_addr: usize) {
                 cpu::halt();
             }
         }
+    }
+
+    check_stack_canary();
+}
+
+fn check_stack_canary() {
+    if !mem::stack_canary_intact() {
+        panic!("pilha do kernel estourou");
     }
 }
 

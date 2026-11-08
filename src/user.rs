@@ -13,16 +13,30 @@ pub fn sys_yield() {
 }
 
 pub fn sys_write(bytes: &[u8]) -> isize {
-    let ret: usize;
+    let mut sent = 0;
+
+    while sent < bytes.len() {
+        let written = write_chunk(&bytes[sent..]);
+        if written == syscall::ERROR {
+            return -1;
+        }
+        sent += written;
+    }
+
+    sent as isize
+}
+
+fn write_chunk(bytes: &[u8]) -> usize {
+    let written: usize;
     unsafe {
         asm!(
             "ecall",
             in("a7") syscall::WRITE,
-            inlateout("a0") bytes.as_ptr() as usize => ret,
+            inlateout("a0") bytes.as_ptr() as usize => written,
             in("a1") bytes.len(),
         );
     }
-    ret as isize
+    written
 }
 
 pub fn sys_read() -> Option<u8> {

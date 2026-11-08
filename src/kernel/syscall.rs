@@ -15,6 +15,8 @@ pub const SPAWN: usize = 4;
 
 pub const ERROR: usize = usize::MAX;
 
+const MAX_WRITE_LEN: usize = 256;
+
 #[derive(Debug)]
 pub struct Syscall {
     pub number: usize,
@@ -50,6 +52,8 @@ pub unsafe fn set_return(index: usize, value: usize) {
 }
 
 pub fn write(index: usize, ptr: usize, len: usize) -> usize {
+    let len = len.min(MAX_WRITE_LEN);
+
     match user_buffer(index, ptr, len) {
         Some(bytes) => {
             uart::write_bytes(bytes);

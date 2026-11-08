@@ -125,6 +125,7 @@ macro_rules! reuse_tests {
 
 pub mod buddy;
 pub mod bump;
+pub mod hellfire;
 pub mod pool;
 pub mod tlsf;
 
