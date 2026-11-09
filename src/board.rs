@@ -21,7 +21,7 @@ mod ibex {
     pub const MTIME: usize = 0x8000_2000;
     pub const MTIMECMP: usize = 0x8000_2008;
 
-    pub const CLOCK_HZ: u64 = 27_000_000;
+    pub const CLOCK_HZ: u64 = 40_000_000;
 }
 
 #[cfg(feature = "ibex")]

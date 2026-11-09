@@ -8,6 +8,7 @@ const MOSI: u8 = 1 << 2;
 const MISO: u32 = 1 << 0;
 
 const READ_COMMAND: u8 = 0x03;
+const CLOCKS_BEFORE_SELECT: u8 = 8;
 
 pub fn read(base: usize, offset: usize, buffer: &mut [u8]) {
     let pins = (base + OUT_OFFSET + FLASH_PINS_BYTE) as *mut u8;
@@ -15,6 +16,10 @@ pub fn read(base: usize, offset: usize, buffer: &mut [u8]) {
     let address = offset.to_be_bytes();
 
     unsafe {
+        for _ in 0..CLOCKS_BEFORE_SELECT {
+            pins.write_volatile(SCK);
+            pins.write_volatile(0);
+        }
         pins.write_volatile(CS);
         transfer(pins, input, READ_COMMAND);
         transfer(pins, input, address[1]);

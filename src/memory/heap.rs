@@ -5,6 +5,7 @@ use core::ptr::NonNull;
 use bode_os::allocators::Allocator;
 use bode_os::allocators::buddy::Buddy;
 
+use crate::arch::pmp;
 use crate::memory::mem;
 
 static mut HEAP: Option<Buddy> = None;
@@ -36,6 +37,10 @@ pub unsafe fn init() {
 /// # Safety
 /// Chamar só com as interrupções desligadas, depois de `init`.
 pub unsafe fn alloc_region(size: usize) -> Option<Range<usize>> {
+    if size < pmp::MIN_REGION {
+        return None;
+    }
+
     let heap = unsafe { heap_mut() }.as_mut()?;
     let layout = Layout::from_size_align(size, size).ok()?;
     let start = heap.alloc(layout)?.as_ptr().addr();

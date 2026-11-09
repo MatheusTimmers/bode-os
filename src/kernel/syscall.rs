@@ -74,6 +74,11 @@ pub fn read() -> usize {
 /// Chamar só com as interrupções desligadas.
 #[cfg(feature = "hw-test")]
 pub unsafe fn spawn(entry: usize, size: usize) -> usize {
+    let text = mem::text_start()..mem::text_end();
+    if !text.contains(&entry) || !entry.is_multiple_of(2) {
+        return ERROR;
+    }
+
     let Some(region) = (unsafe { heap::alloc_region(size) }) else {
         return ERROR;
     };

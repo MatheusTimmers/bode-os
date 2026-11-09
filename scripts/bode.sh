@@ -56,9 +56,14 @@ case "$where" in
         ;;
     placa)
         if (( ${#programs[@]} > 0 )); then
-            scripts/tang-programs.sh "${programs[@]}"
+            scripts/nexys-programs.sh "${programs[@]}"
         fi
-        BODE_FEATURES="$feature" scripts/tang-run.sh
+        cargo build --release --features "ibex${feature:+,$feature}"
+        if [[ -n "${NEXYS_FULL:-}" ]]; then
+            scripts/nexys-flash.sh "$(scripts/nexys-build.sh "$(scripts/vmem.sh)" "$mode")"
+        else
+            scripts/nexys-flash.sh "$(scripts/nexys-base.sh)" "$ELF"
+        fi
         ;;
     *)
         usage

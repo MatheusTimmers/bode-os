@@ -9,6 +9,7 @@ pub const EXECUTE: usize = 1 << 2;
 pub const OFF: usize = 0b00 << 3;
 pub const TOR: usize = 0b01 << 3;
 pub const NAPOT: usize = 0b11 << 3;
+pub const MIN_REGION: usize = 8;
 
 const START_RULE: usize = 0;
 const TEXT_RULE: usize = 1;
@@ -48,7 +49,7 @@ fn to_pmpaddr(addr: usize) -> usize {
 fn napot_addr(region: Range<usize>) -> usize {
     let size = region.end - region.start;
 
-    debug_assert!(size >= 8);
+    debug_assert!(size >= MIN_REGION);
     debug_assert!(size.is_power_of_two());
     debug_assert!(region.start.is_multiple_of(size));
 
