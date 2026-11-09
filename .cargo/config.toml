@@ -5,6 +5,6 @@ target = "riscv32imc-unknown-none-elf"
 runner = "./scripts/run.sh"
 
 [alias]
-test-host = "test --lib --target x86_64-unknown-linux-gnu"
+test-host = "test --lib --target i686-unknown-linux-gnu"
 build-ibex = "build --release --features ibex"
 run-ibex = ["run", "--release", "--features", "ibex", "--config", "target.riscv32imc-unknown-none-elf.runner='./scripts/run-ibex.sh'"]

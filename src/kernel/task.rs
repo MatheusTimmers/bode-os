@@ -84,6 +84,8 @@ pub unsafe fn kill(index: usize) {
     let task = &mut table.slots[index];
 
     task.state = State::Free;
+    let start = task.region.start as *mut u8;
+    unsafe { start.write_bytes(0, task.region.len()) };
     unsafe { heap::free_region(task.region.clone()) };
     task.region = 0..0;
 }

@@ -22,6 +22,11 @@ pub unsafe fn fresh_arena() -> &'static mut [u8] {
     arena
 }
 
+#[cfg(feature = "bench")]
+pub fn fresh_arena_start() -> usize {
+    mem::heap_range().start
+}
+
 /// # Safety
 /// Chamar uma vez no boot, depois de `initialize_bss`.
 pub unsafe fn init() {

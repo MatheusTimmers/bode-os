@@ -22,6 +22,8 @@ const SYSCALL_EXIT: i32 = 0;
 const SYSCALL_PRINT: i32 = 1;
 const SYSCALL_READ: i32 = 2;
 
+const MAX_NEGATIVE_MAGNITUDE: u32 = 1 << 31;
+
 pub fn program_size(code_len: usize, data_len: usize) -> Option<usize> {
     let code = code_len.checked_mul(INSTRUCTION_SIZE)?;
     let data = data_len.checked_mul(VARIABLE_SIZE)?;
@@ -104,7 +106,7 @@ pub extern "C" fn run(start: usize, id: usize) -> ! {
                 if !program.is_label(operand) {
                     fail(id, "salto para fora do código");
                 }
-                let jump = match opcode {
+                let jump = match opcode & !IMMEDIATE {
                     BRANY => true,
                     BRPOS => acc > 0,
                     BRZERO => acc == 0,
@@ -193,7 +195,7 @@ fn read_int(id: usize) -> i32 {
 }
 
 fn read_line_as_int() -> Option<i32> {
-    let mut value: i32 = 0;
+    let mut value: u32 = 0;
     let mut digits = 0;
     let mut negative = false;
     let mut valid = true;
@@ -211,8 +213,14 @@ fn read_line_as_int() -> Option<i32> {
             }
             b'-' if digits == 0 && !negative => negative = true,
             b'0'..=b'9' => {
-                let digit = (byte - b'0') as i32;
-                value = value.wrapping_mul(10).wrapping_add(digit);
+                let digit = (byte - b'0') as u32;
+                match value
+                    .checked_mul(10)
+                    .and_then(|tens| tens.checked_add(digit))
+                {
+                    Some(next) => value = next,
+                    None => valid = false,
+                }
                 digits += 1;
             }
             _ => valid = false,
@@ -224,7 +232,13 @@ fn read_line_as_int() -> Option<i32> {
         return None;
     }
     if negative {
-        return Some(-value);
+        if value > MAX_NEGATIVE_MAGNITUDE {
+            return None;
+        }
+        return Some((value as i32).wrapping_neg());
     }
-    Some(value)
+    if value > i32::MAX as u32 {
+        return None;
+    }
+    Some(value as i32)
 }

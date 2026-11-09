@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 KERNEL="${1:-$ROOT/target/riscv32imc-unknown-none-elf/release/bode_os}"
 OUT="${2:-$KERNEL.vmem}"
-RAM_START=0x00100000
+RAM_START="$(awk '/RAM_START/ { gsub(";", ""); print $3 }' "$ROOT/boards/ibex/board.ld")"
 
 bin="$(mktemp)"
 trap 'rm -f "$bin"' EXIT
