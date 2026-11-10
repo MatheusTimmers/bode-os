@@ -9,7 +9,7 @@ usage() {
 uso: scripts/bode.sh <onde> [modo] [programas.txt...]
 
 onde:  qemu | sim | placa
-modo:  normal (padrao) | hw-test | bench
+modo:  normal (padrao) | hw-test | bench | switch-bench | switch-bench-no-pmp
 
 exemplos:
   scripts/bode.sh qemu
@@ -28,7 +28,7 @@ programs=("$@")
 
 case "$mode" in
     normal) feature="" ;;
-    hw-test | bench) feature="$mode" ;;
+    hw-test | bench | switch-bench | switch-bench-no-pmp) feature="$mode" ;;
     *) usage ;;
 esac
 

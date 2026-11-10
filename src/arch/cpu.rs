@@ -53,7 +53,7 @@ pub unsafe extern "C" fn restore_context(addr: usize) -> ! {
     )
 }
 
-#[cfg(feature = "bench")]
+#[cfg(any(feature = "bench", feature = "switch-bench"))]
 #[inline]
 pub fn read_mcycle() -> u32 {
     let value: u32;

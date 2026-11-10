@@ -35,7 +35,9 @@ pub extern "C" fn vector_table() -> ! {
 unsafe fn switch_to_next_task() {
     match unsafe { scheduler::schedule() } {
         Ok(next) => unsafe {
-            pmp::allow_region(task::region(next));
+            if !cfg!(feature = "switch-bench-no-pmp") {
+                pmp::allow_region(task::region(next));
+            }
             cpu::write_mscratch(task::context_addr(next));
         },
         Err(scheduler::Error::NoReadyTask) => {
@@ -46,6 +48,11 @@ unsafe fn switch_to_next_task() {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn handler(ctx_addr: usize) {
+    #[cfg(feature = "switch-bench")]
+    unsafe {
+        crate::switch_bench::on_trap()
+    };
+
     check_stack_canary();
 
     let mcause = cpu::read_mcause();

@@ -19,6 +19,8 @@ mod hwtest;
 mod kernel;
 mod memory;
 mod program;
+#[cfg(feature = "switch-bench")]
+mod switch_bench;
 mod user;
 
 extern "C" fn task_idle() -> ! {
@@ -49,7 +51,11 @@ pub extern "C" fn kmain() -> ! {
         #[cfg(feature = "hw-test")]
         hwtest::spawn_all();
 
-        loader::load_programs();
+        #[cfg(feature = "switch-bench")]
+        switch_bench::prepare();
+        if !cfg!(feature = "switch-bench") {
+            loader::load_programs();
+        }
     };
 
     println!("Iniciando o Kernel BODE...");
@@ -63,7 +69,10 @@ pub extern "C" fn kmain() -> ! {
 
     unsafe {
         let first = scheduler::start();
+        #[cfg(not(feature = "switch-bench-no-pmp"))]
         pmp::allow_region(task::region(first));
+        #[cfg(feature = "switch-bench-no-pmp")]
+        pmp::allow_region(switch_bench::shared_block(task::region(first)));
         cpu::restore_context(task::context_addr(first))
     }
 }
