@@ -29,7 +29,6 @@ const PRESSURE_SIZES: [usize; 3] = [512, 1024, 2048];
 const SMALL_MIN: usize = 8;
 const SMALL_RANGE: u32 = 249;
 const WORD_ALIGN: usize = 4;
-const SPLIT_SIZE: usize = 16;
 const HIST_BINS: usize = 20;
 const HIST_WIDTH: u32 = 32;
 const MIN_POWER_BLOCK: usize = 16;
@@ -39,6 +38,8 @@ const HELLFIRE_WORD: usize = 4;
 const HELLFIRE_HEADER: usize = 8;
 const PMP_SAMPLES: u32 = 1000;
 const PMP_REGION_SIZE: usize = 1024;
+const ARENA_BYTES: usize = 8 * 1024;
+const POOL_LARGEST_CLASS: usize = 1024;
 
 struct Scenario {
     name: &'static str,
@@ -48,7 +49,7 @@ struct Scenario {
     layout: fn(u32) -> Layout,
 }
 
-const SCENARIOS: [Scenario; 4] = [
+const SCENARIOS: [Scenario; 3] = [
     Scenario {
         name: "tarefas",
         slots: SLOTS,
@@ -70,13 +71,6 @@ const SCENARIOS: [Scenario; 4] = [
         word_aligned: false,
         layout: pressure_layout,
     },
-    Scenario {
-        name: "divisao",
-        slots: 1,
-        budget: NO_BUDGET,
-        word_aligned: true,
-        layout: split_layout,
-    },
 ];
 
 fn aligned_to_size(sizes: &[usize], random: u32) -> Layout {
@@ -95,10 +89,6 @@ fn pressure_layout(random: u32) -> Layout {
 fn small_layout(random: u32) -> Layout {
     let size = SMALL_MIN + (random % SMALL_RANGE) as usize;
     Layout::from_size_align(size, WORD_ALIGN).expect("layout invalido")
-}
-
-fn split_layout(_random: u32) -> Layout {
-    Layout::from_size_align(SPLIT_SIZE, WORD_ALIGN).expect("layout invalido")
 }
 
 #[derive(Clone, Copy)]
@@ -169,6 +159,14 @@ fn hellfire_block(layout: Layout) -> usize {
     layout.size().next_multiple_of(HELLFIRE_WORD) + HELLFIRE_HEADER
 }
 
+fn any_request(_layout: Layout) -> bool {
+    true
+}
+
+fn pool_class_exists(layout: Layout) -> bool {
+    layout.size().max(layout.align()) <= POOL_LARGEST_CLASS
+}
+
 fn next_random(state: &mut u32) -> u32 {
     let mut value = *state;
     value ^= value << 13;
@@ -192,6 +190,8 @@ struct Metrics {
     alloc: Stats,
     free: Stats,
     failed: Stats,
+    refused: u32,
+    fragmented: u32,
     peak_requested: usize,
     peak_consumed: usize,
 }
@@ -201,6 +201,7 @@ fn run_scenario(
     allocator: &mut dyn Allocator,
     name: &str,
     consumed: fn(Layout) -> usize,
+    supported: fn(Layout) -> bool,
     scenario: &Scenario,
     seed: u32,
     overhead: u32,
@@ -211,6 +212,8 @@ fn run_scenario(
         alloc: Stats::new(),
         free: Stats::new(),
         failed: Stats::new(),
+        refused: 0,
+        fragmented: 0,
         peak_requested: 0,
         peak_consumed: 0,
     };
@@ -242,8 +245,13 @@ fn run_scenario(
                     consumed_bytes += consumed(layout);
                     metrics.peak_requested = metrics.peak_requested.max(requested_bytes);
                     metrics.peak_consumed = metrics.peak_consumed.max(consumed_bytes);
-                } else {
+                } else if supported(layout) {
                     metrics.failed.record(cycles);
+                    if ARENA_BYTES - consumed_bytes >= consumed(layout) {
+                        metrics.fragmented += 1;
+                    }
+                } else {
+                    metrics.refused += 1;
                 }
             }
             Some((Some(block), layout)) => {
@@ -275,11 +283,13 @@ fn report(scenario: &str, name: &str, seed: u32, metrics: &Metrics) {
         alloc,
         free,
         failed,
+        refused,
+        fragmented,
         peak_requested,
         peak_consumed,
     } = metrics;
     println!(
-        "bench,{},{},{:08x},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+        "bench,{},{},{:08x},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
         scenario,
         name,
         seed,
@@ -297,7 +307,9 @@ fn report(scenario: &str, name: &str, seed: u32, metrics: &Metrics) {
         failed.mean(),
         failed.max,
         peak_requested,
-        peak_consumed
+        peak_consumed,
+        refused,
+        fragmented
     );
     print_bins(scenario, name, seed, "alloc", alloc);
     print_bins(scenario, name, seed, "free", free);
@@ -339,7 +351,7 @@ pub unsafe fn run() -> ! {
     let overhead = measurement_overhead();
     println!("bench,overhead,{}", overhead);
     println!(
-        "bench,cenario,alocador,semente,alloc_n,alloc_min,alloc_media,alloc_max,alloc_total,free_n,free_min,free_media,free_max,free_total,falhas,falha_media,falha_max,pico_pedido,pico_consumido"
+        "bench,cenario,alocador,semente,alloc_n,alloc_min,alloc_media,alloc_max,alloc_total,free_n,free_min,free_media,free_max,free_total,falhas,falha_media,falha_max,pico_pedido,pico_consumido,recusas,falhas_fragmentacao"
     );
 
     for scenario in &SCENARIOS {
@@ -349,6 +361,7 @@ pub unsafe fn run() -> ! {
                     &mut Bump::new(heap::fresh_arena()),
                     "bump",
                     exact_size,
+                    any_request,
                     scenario,
                     seed,
                     overhead,
@@ -357,6 +370,7 @@ pub unsafe fn run() -> ! {
                     &mut Pool::new(heap::fresh_arena()),
                     "pool",
                     power_of_two_block,
+                    pool_class_exists,
                     scenario,
                     seed,
                     overhead,
@@ -365,6 +379,7 @@ pub unsafe fn run() -> ! {
                     &mut Buddy::new(heap::fresh_arena()),
                     "buddy",
                     power_of_two_block,
+                    any_request,
                     scenario,
                     seed,
                     overhead,
@@ -373,6 +388,7 @@ pub unsafe fn run() -> ! {
                     &mut Tlsf::new(heap::fresh_arena()),
                     "tlsf",
                     tlsf_block,
+                    any_request,
                     scenario,
                     seed,
                     overhead,
@@ -382,6 +398,7 @@ pub unsafe fn run() -> ! {
                         &mut Hellfire::new(heap::fresh_arena()),
                         "hellfire",
                         hellfire_block,
+                        any_request,
                         scenario,
                         seed,
                         overhead,

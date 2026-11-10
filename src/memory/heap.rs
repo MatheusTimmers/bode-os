@@ -10,12 +10,12 @@ use crate::memory::mem;
 
 static mut HEAP: Option<Buddy> = None;
 
-#[cfg(feature = "bench")]
+#[cfg(any(feature = "bench", feature = "worst-bench"))]
 const BENCH_ARENA_SIZE: usize = 8 * 1024;
 
 /// # Safety
 /// Chamar só antes de `init`, e sem usar a arena devolvida por uma chamada anterior.
-#[cfg(feature = "bench")]
+#[cfg(any(feature = "bench", feature = "worst-bench"))]
 pub unsafe fn fresh_arena() -> &'static mut [u8] {
     let arena = unsafe { arena() };
     let arena = &mut arena[..BENCH_ARENA_SIZE];

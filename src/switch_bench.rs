@@ -1,8 +1,8 @@
 #[cfg(feature = "switch-bench-no-pmp")]
 use core::ops::Range;
 
-use crate::arch::cpu;
-use crate::kernel::task;
+use crate::arch::{cpu, pmp};
+use crate::kernel::{scheduler, task};
 use crate::memory::heap;
 use crate::{println, user};
 
@@ -12,6 +12,8 @@ const TASK_BLOCK: usize = 1024;
 const SHARED_BLOCK: usize = 2 * TASK_BLOCK;
 const ZERO_SIZES: [usize; 4] = [512, 1024, 2048, 4096];
 const ZERO_SAMPLES: u32 = 200;
+const LIFECYCLE_SIZES: [usize; 3] = [512, 1024, 2048];
+const LIFECYCLE_SAMPLES: u32 = 8;
 
 struct Stats {
     count: u32,
@@ -121,6 +123,44 @@ fn measure_zeroing(size: usize) {
     unsafe { heap::free_region(region) };
 }
 
+fn print_stats(label: &str, size: usize, stats: &Stats) {
+    println!(
+        "{},{},{},{},{},{}",
+        label,
+        size,
+        stats.count,
+        stats.smallest,
+        stats.mean(),
+        stats.largest
+    );
+}
+
+fn measure_lifecycle(size: usize) {
+    let overhead = cpu::read_mcycle()
+        .wrapping_sub(cpu::read_mcycle())
+        .wrapping_neg();
+    let mut spawned = Stats::new();
+    let mut killed = Stats::new();
+
+    for _ in 0..LIFECYCLE_SAMPLES {
+        let start = cpu::read_mcycle();
+        let region = unsafe { heap::alloc_region(size) }.expect("sem memoria para a task");
+        let index = unsafe { task::spawn_process(task_yields, region.clone(), [0, 0]) }
+            .expect("sem vaga para a task");
+        pmp::allow_region(region);
+        let middle = cpu::read_mcycle();
+        unsafe { task::kill(index) };
+        let end = cpu::read_mcycle();
+
+        spawned.record(middle.wrapping_sub(start).saturating_sub(overhead));
+        killed.record(end.wrapping_sub(middle).saturating_sub(overhead));
+        unsafe { scheduler::start() };
+    }
+
+    print_stats("spawn", size, &spawned);
+    print_stats("kill", size, &killed);
+}
+
 #[cfg(feature = "switch-bench-no-pmp")]
 pub fn shared_block(task_region: Range<usize>) -> Range<usize> {
     let start = task_region.start & !(SHARED_BLOCK - 1);
@@ -130,6 +170,9 @@ pub fn shared_block(task_region: Range<usize>) -> Range<usize> {
 pub unsafe fn prepare() {
     for size in ZERO_SIZES {
         measure_zeroing(size);
+    }
+    for size in LIFECYCLE_SIZES {
+        measure_lifecycle(size);
     }
 
     let block = unsafe { heap::alloc_region(SHARED_BLOCK) }.expect("sem memoria para as tasks");

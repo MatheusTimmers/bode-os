@@ -1,6 +1,7 @@
+use core::arch::asm;
 use core::ops::Range;
 
-use crate::kernel::task;
+use crate::kernel::{syscall, task};
 use crate::memory::{heap, mem};
 use crate::program::interpreter;
 use crate::{board, user};
@@ -10,6 +11,7 @@ const VICTIM_SECRET: u32 = 0xCAFE_F00D;
 const VICTIM_ROUNDS: usize = 3;
 const SPIN_ITERATIONS: u32 = 4_000_000;
 const WORD: usize = size_of::<u32>();
+const MISALIGNED_TAIL: usize = 2;
 const FINAL_ROUNDS: usize = 6;
 const CHILD_SIZES: [usize; 9] = [512, 1024, 2048, 2048, 512, 1024, 1024, 2048, 2048];
 
@@ -89,6 +91,18 @@ extern "C" fn allocator(_: usize, _: usize) -> ! {
         }
     }
 
+    let boundary_tests: [Test; 3] = [
+        child_reads_csr,
+        child_passes_kernel_pointer,
+        child_crosses_block_end,
+    ];
+    for child in boundary_tests {
+        while user::sys_spawn(child, BLOCK_SIZE).is_none() {
+            waits += 1;
+            user::sys_yield();
+        }
+    }
+
     for _ in 0..FINAL_ROUNDS {
         user::sys_yield();
     }
@@ -117,6 +131,43 @@ extern "C" fn child_reads_before_start(start: usize, size: usize) -> ! {
     exercise_block(start, size);
     user::sys_write(b"hw-test: filho le antes do inicio do bloco\n");
     unsafe { ((start - WORD) as *const u32).read_volatile() };
+    survived();
+}
+
+extern "C" fn child_reads_csr(_: usize, _: usize) -> ! {
+    user::sys_write(b"hw-test: le csr de modo M\n");
+    unsafe { asm!("csrr {}, mstatus", out(reg) _) };
+    survived();
+}
+
+extern "C" fn child_passes_kernel_pointer(_: usize, _: usize) -> ! {
+    let result: usize;
+    unsafe {
+        asm!(
+            "ecall",
+            in("a7") syscall::WRITE,
+            inlateout("a0") mem::rodata_end() => result,
+            in("a1") WORD,
+        );
+    }
+
+    if result == syscall::ERROR {
+        user::sys_write(b"hw-test: kernel recusou ponteiro invalido\n");
+    } else {
+        user::sys_write(b"hw-test: FALHOU, kernel aceitou ponteiro invalido\n");
+    }
+    user::sys_exit();
+}
+
+extern "C" fn child_crosses_block_end(start: usize, size: usize) -> ! {
+    user::sys_write(b"hw-test: filho le cruzando o fim do bloco\n");
+    unsafe {
+        asm!(
+            "lw {value}, 0({address})",
+            value = out(reg) _,
+            address = in(reg) start + size - MISALIGNED_TAIL,
+        );
+    }
     survived();
 }
 

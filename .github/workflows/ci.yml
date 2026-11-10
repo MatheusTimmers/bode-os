@@ -24,6 +24,7 @@ jobs:
         run: |
           cargo clippy --features hw-test -- -D warnings
           cargo clippy --features bench -- -D warnings
+          cargo clippy --features worst-bench -- -D warnings
           cargo clippy --features switch-bench -- -D warnings
           cargo clippy --features switch-bench-no-pmp -- -D warnings
 
@@ -32,6 +33,7 @@ jobs:
           cargo clippy --release --features ibex -- -D warnings
           cargo clippy --release --features ibex,hw-test -- -D warnings
           cargo clippy --release --features ibex,bench -- -D warnings
+          cargo clippy --release --features ibex,worst-bench -- -D warnings
           cargo clippy --release --features ibex,switch-bench -- -D warnings
           cargo clippy --release --features ibex,switch-bench-no-pmp -- -D warnings
 

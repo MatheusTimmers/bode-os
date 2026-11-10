@@ -22,6 +22,8 @@ mod program;
 #[cfg(feature = "switch-bench")]
 mod switch_bench;
 mod user;
+#[cfg(feature = "worst-bench")]
+mod worst_bench;
 
 extern "C" fn task_idle() -> ! {
     loop {
@@ -35,7 +37,10 @@ fn panic(info: &PanicInfo<'_>) -> ! {
     cpu::halt();
 }
 
-#[cfg_attr(feature = "bench", allow(unreachable_code))]
+#[cfg_attr(
+    any(feature = "bench", feature = "worst-bench"),
+    allow(unreachable_code)
+)]
 #[unsafe(no_mangle)]
 pub extern "C" fn kmain() -> ! {
     unsafe {
@@ -45,6 +50,8 @@ pub extern "C" fn kmain() -> ! {
         pmp::protect_kernel();
         #[cfg(feature = "bench")]
         bench::run();
+        #[cfg(feature = "worst-bench")]
+        worst_bench::run();
 
         heap::init();
         task::spawn_idle(task_idle).expect("sem vaga para o Idle");

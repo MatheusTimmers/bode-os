@@ -8,6 +8,7 @@ FIELDS = [
     "alloc_n", "alloc_min", "alloc_media", "alloc_max", "alloc_total",
     "free_n", "free_min", "free_media", "free_max", "free_total",
     "falhas", "falha_media", "falha_max", "pico_pedido", "pico_consumido",
+    "recusas", "falhas_fragmentacao",
 ]
 BIN_WIDTH = 32
 
@@ -40,13 +41,13 @@ def main():
         for row in csv.reader(file):
             if row[:2] == ["pmp", "allow_region"]:
                 pmp = row[2:]
-            elif len(row) == 19 and row[0] == "bench" and row[3] != "semente":
+            elif len(row) == 21 and row[0] == "bench" and row[3] != "semente":
                 runs[row[1], row[2]].append(dict(zip(FIELDS, map(int, row[4:]))))
             elif row and row[0] == "hist":
                 add_bins(histograms[row[1], row[2], row[4]], list(map(int, row[5:])))
 
-    print("| cenario | alocador | alloc min | alloc media | alloc p50 | alloc p99 | alloc pior | free media | free pior | falhas | pior falha | pico pedido | pico consumido |")
-    print("|" + " --- |" * 13)
+    print("| cenario | alocador | alloc min | alloc media | alloc p50 | alloc p99 | alloc pior | free media | free pior | falhas | pior falha | pico pedido | pico consumido | recusas | falhas por fragmentacao |")
+    print("|" + " --- |" * 15)
     for key, group in runs.items():
         scenario, allocator = key
         alloc_n = sum(run["alloc_n"] for run in group)
@@ -66,6 +67,8 @@ def main():
             max(run["falha_max"] for run in group),
             max(run["pico_pedido"] for run in group),
             max(run["pico_consumido"] for run in group),
+            sum(run["recusas"] for run in group),
+            "-" if allocator == "bump" else sum(run["falhas_fragmentacao"] for run in group),
         ]
         print("| " + " | ".join(map(str, cells)) + " |")
 

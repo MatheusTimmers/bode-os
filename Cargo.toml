@@ -8,6 +8,7 @@ edition = "2024"
 [features]
 hw-test = []
 bench = []
+worst-bench = []
 switch-bench = []
 switch-bench-no-pmp = ["switch-bench"]
 ibex = []
